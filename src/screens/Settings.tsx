@@ -4,7 +4,7 @@ import { setSetting } from '../db';
 import { MUSCLES } from '../types';
 import { ConfirmSheet, Header, Icon, NumInput, SectionTitle, Sheet, useToast } from '../components/ui';
 import {
-  buildBackup, commitHevy, markBackupDone, previewHevy, resetAll, restoreBackup, validateBackup,
+  commitHevy, markBackupDone, previewHevy, resetAll, restoreBackup, shareBackup, validateBackup,
   type BackupFile, type HevyPreview
 } from '../lib/actions';
 import { fmtNum, parseNum } from '../lib/calc';
@@ -31,22 +31,7 @@ export function Settings() {
   const loc = lang === 'pt' ? 'pt-PT' : 'en-GB';
 
   const exportBackup = async () => {
-    const b = await buildBackup();
-    const json = JSON.stringify(b);
-    const name = `simons-fit-${new Date().toISOString().slice(0, 10)}.json`;
-    const file = new File([json], name, { type: 'application/json' });
-    try {
-      if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: name });
-      else {
-        const a = document.createElement('a');
-        a.href = URL.createObjectURL(file);
-        a.download = name;
-        a.click();
-        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-      }
-      await markBackupDone();
-      toast(t('backup.done'));
-    } catch { /* cancelado */ }
+    if ((await shareBackup()) !== 'cancelled') toast(t('backup.done'));
   };
 
   const onCsv = async (f: File | undefined) => {
@@ -151,7 +136,7 @@ export function Settings() {
             {hevy.newExercises.length > 0 && <p className="muted small">{t('hevy.newex.list')}: {hevy.newExercises.map((e) => e.name).join(', ')}</p>}
             <div className="row gap">
               <button className="btn ghost grow" onClick={() => setHevy(null)}>{t('cancel')}</button>
-              <button className="btn gold grow" disabled={hevy.newWorkouts === 0} onClick={async () => { const n = await commitHevy(hevy); setHevy(null); toast(t('hevy.done', { n })); }}>{t('hevy.confirm')}</button>
+              <button className="btn accent grow" disabled={hevy.newWorkouts === 0} onClick={async () => { const n = await commitHevy(hevy); setHevy(null); toast(t('hevy.done', { n })); }}>{t('hevy.confirm')}</button>
             </div>
           </>
         )}

@@ -115,7 +115,7 @@ export function ExerciseForm({ initial, onSave, onCancel }: {
       {err && <div className="err">{err}</div>}
       <div className="row gap" style={{ marginTop: 16 }}>
         <button className="btn ghost grow" onClick={onCancel}>{t('cancel')}</button>
-        <button className="btn gold grow" onClick={save}>{t('save')}</button>
+        <button className="btn accent grow" onClick={save}>{t('save')}</button>
       </div>
     </div>
   );

@@ -214,6 +214,29 @@ export async function markBackupDone() {
   await setSetting('lastBackupAt', Date.now());
 }
 
+/** Backup num toque: abre a folha de partilha do sistema (Guardar em Ficheiros/iCloud) ou descarrega o ficheiro. */
+export async function shareBackup(): Promise<'shared' | 'downloaded' | 'cancelled'> {
+  const b = await buildBackup();
+  const name = `simons-fit-${new Date().toISOString().slice(0, 10)}.json`;
+  const file = new File([JSON.stringify(b)], name, { type: 'application/json' });
+  try {
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: name });
+      await markBackupDone();
+      return 'shared';
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    await markBackupDone();
+    return 'downloaded';
+  } catch {
+    return 'cancelled'; // o utilizador fechou a folha de partilha
+  }
+}
+
 export function validateBackup(x: unknown): x is BackupFile {
   const b = x as BackupFile;
   return !!b && b.app === 'simons-fit' && Array.isArray(b.workouts) && Array.isArray(b.exercises) && Array.isArray(b.routines);

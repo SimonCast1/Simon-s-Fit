@@ -64,7 +64,7 @@ export function RoutineEditor({ id }: { id: number | 'new' }) {
         onBack
         backTo="/routines"
         title={id === 'new' ? t('routine.new') : t('routine.edit')}
-        right={<button className="btn gold sm" onClick={save}>{t('save')}</button>}
+        right={<button className="btn accent sm" onClick={save}>{t('save')}</button>}
       />
       <label className="lbl">{t('routine.name')}</label>
       <input className="inp" value={r.name} onChange={(e) => upd((x) => { x.name = e.target.value; })} placeholder={t('routine.name.ph')} />
@@ -91,7 +91,7 @@ export function RoutineEditor({ id }: { id: number | 'new' }) {
               <div className="row">
                 {i > 0 && <button className="icon-btn sm" onClick={() => upd((x) => { [x.items[i - 1], x.items[i]] = [x.items[i], x.items[i - 1]]; })} aria-label="up"><Icon name="up" size={16} /></button>}
                 {i < r.items.length - 1 && <button className="icon-btn sm" onClick={() => upd((x) => { [x.items[i + 1], x.items[i]] = [x.items[i], x.items[i + 1]]; })} aria-label="down"><Icon name="down" size={16} /></button>}
-                {(next || linked) && <button className={`icon-btn sm ${linked ? 'gold-i' : ''}`} onClick={() => toggleSS(i)} aria-label="superset"><Icon name="link" size={16} /></button>}
+                {(next || linked) && <button className={`icon-btn sm ${linked ? 'accent-i' : ''}`} onClick={() => toggleSS(i)} aria-label="superset"><Icon name="link" size={16} /></button>}
                 <button className="icon-btn sm" onClick={() => upd((x) => { x.items.splice(i, 1); })} aria-label="remove"><Icon name="trash" size={16} /></button>
               </div>
             </div>

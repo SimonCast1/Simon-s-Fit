@@ -352,7 +352,7 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
           </button>
         }
         sub={editing ? new Date(w.startedAt).toLocaleDateString(lang === 'pt' ? 'pt-PT' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : <><Elapsed start={w.startedAt} /> · {doneSets} {t('sets.lc')}</>}
-        right={<button className="btn gold sm" onClick={() => setFinishOpen(true)}>{editing ? t('save') : t('finish')}</button>}
+        right={<button className="btn accent sm" onClick={() => setFinishOpen(true)}>{editing ? t('save') : t('finish')}</button>}
       />
 
       {!editing && deload && !hideDeload && (
@@ -432,7 +432,7 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
               <div className="ex-hints">
                 {sugg?.kind === 'increase' && (
                   <button
-                    className="hint-chip gold"
+                    className="hint-chip accent"
                     onClick={() => patch((x) => {
                       for (const s of x.exercises[ei].sets) if (!s.done && !s.warmup) { s.weight = sugg.weight; s.reps = sugg.reps; }
                     })}
@@ -516,7 +516,7 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
         </p>
         <div className="row gap">
           <button className="btn ghost grow" onClick={() => setFinishOpen(false)}>{t('wk.continue')}</button>
-          <button className="btn gold grow" onClick={finish}>{editing ? t('save') : t('finish')}</button>
+          <button className="btn accent grow" onClick={finish}>{editing ? t('save') : t('finish')}</button>
         </div>
       </Sheet>
 
@@ -533,13 +533,13 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
 
       <Sheet open={renameOpen} onClose={() => setRenameOpen(false)} title={t('wk.rename')}>
         <input className="inp" value={nameDraft} onChange={(e) => setNameDraft(e.target.value)} autoFocus />
-        <button className="btn gold block" style={{ marginTop: 12 }} onClick={() => { void patch((x) => { x.name = nameDraft.trim() || x.name; }); setRenameOpen(false); }}>{t('save')}</button>
+        <button className="btn accent block" style={{ marginTop: 12 }} onClick={() => { void patch((x) => { x.name = nameDraft.trim() || x.name; }); setRenameOpen(false); }}>{t('save')}</button>
       </Sheet>
 
       <Sheet open={noteFor !== null} onClose={() => setNoteFor(null)} title={t('wk.note')}>
         <textarea className="inp" rows={3} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} />
         <button
-          className="btn gold block"
+          className="btn accent block"
           style={{ marginTop: 12 }}
           onClick={() => { const i = noteFor!; void patch((x) => { x.exercises[i].note = noteDraft.trim() || undefined; }); setNoteFor(null); }}
         >{t('save')}</button>

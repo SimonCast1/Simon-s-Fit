@@ -327,3 +327,76 @@ export function workoutTotals(w: Workout, exMap: Map<string, Exercise>) {
 export function newId(): string {
   return Math.random().toString(36).slice(2, 10);
 }
+
+/* ---------- PRs de um treino ---------- */
+
+export interface WorkoutPR {
+  exerciseId: string;
+  setIndex: number;
+  kinds: PRKind[];
+}
+
+/** Melhor série com recorde de cada exercício, comparada com tudo o que veio antes do treino. */
+export function workoutPRs(w: Workout, all: Workout[], exMap: Map<string, Exercise>): WorkoutPR[] {
+  const prior = all.filter((f) => f.startedAt < w.startedAt);
+  const out: WorkoutPR[] = [];
+  for (const we of w.exercises) {
+    const ex = exMap.get(we.exerciseId);
+    if (!ex) continue;
+    const rec = computeRecords(exerciseSessions(prior, ex, ex.id));
+    let best = -1;
+    let idx = -1;
+    let kinds: PRKind[] = [];
+    we.sets.forEach((s, i) => {
+      if (!isWorking(s)) return;
+      const k = detectPR(ex, rec, s);
+      if (k.length && setScore(ex, s) > best) {
+        best = setScore(ex, s);
+        idx = i;
+        kinds = k;
+      }
+    });
+    if (idx >= 0) out.push({ exerciseId: we.exerciseId, setIndex: idx, kinds });
+  }
+  return out;
+}
+
+/* ---------- calendário e consistência ---------- */
+
+export function dayKey(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+/** Treinos agrupados por dia do mês (1–31) num dado mês (month 0–11). */
+export function workoutsByDay(workouts: Workout[], year: number, month: number): Map<number, Workout[]> {
+  const m = new Map<number, Workout[]>();
+  for (const w of workouts) {
+    const d = new Date(w.startedAt);
+    if (d.getFullYear() !== year || d.getMonth() !== month) continue;
+    m.set(d.getDate(), [...(m.get(d.getDate()) ?? []), w]);
+  }
+  return m;
+}
+
+/**
+ * Semanas seguidas com pelo menos `minPerWeek` treinos. A semana atual só conta
+ * se já cumpriu a meta; se ainda não cumpriu, não quebra a sequência.
+ */
+export function weekStreak(workouts: Workout[], minPerWeek: number, now = Date.now()): number {
+  if (minPerWeek < 1) return 0;
+  const counts = new Map<number, number>();
+  for (const w of workouts) {
+    const k = weekStart(w.startedAt);
+    counts.set(k, (counts.get(k) ?? 0) + 1);
+  }
+  let wk = weekStart(now);
+  let streak = 0;
+  if ((counts.get(wk) ?? 0) >= minPerWeek) streak++;
+  for (;;) {
+    wk = weekStart(wk - 1);
+    if ((counts.get(wk) ?? 0) >= minPerWeek) streak++;
+    else break;
+  }
+  return streak;
+}

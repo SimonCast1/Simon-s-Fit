@@ -39,7 +39,7 @@ export function ImportShared({ data }: { data: string }) {
           ))}
         </ul>
         {newExercises.length > 0 && <p className="muted small">{t('share.newex', { n: newExercises.length })}</p>}
-        <button className="btn gold block" onClick={save}>{t('share.save')}</button>
+        <button className="btn accent block" onClick={save}>{t('share.save')}</button>
       </div>
     </div>
   );

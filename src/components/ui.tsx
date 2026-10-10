@@ -15,6 +15,9 @@ const paths: Record<string, ReactNode> = {
   check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
   x: <path d="M6 6l12 12M18 6 6 18" />,
   back: <path d="m14.5 6-6 6 6 6" />,
+  next: <path d="m9.5 6 6 6-6 6" />,
+  image: <><rect x="4" y="5" width="16" height="14" rx="2" /><circle cx="9" cy="10" r="1.5" /><path d="m5 17 5-4.5 3.5 3L16 13l3 3" /></>,
+  calendar: <><rect x="4" y="6" width="16" height="14" rx="2" /><path d="M4 10.5h16M9 4v4M15 4v4" /></>,
   more: <><circle cx="5.5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="18.5" cy="12" r="1" /></>,
   up: <path d="m6 14 6-6 6 6" />,
   down: <path d="m6 10 6 6 6-6" />,
@@ -94,7 +97,7 @@ export function ConfirmSheet({ open, title, text, confirm, danger, onConfirm, on
       {text && <p className="muted" style={{ marginTop: 0 }}>{text}</p>}
       <div className="row gap">
         <button className="btn ghost grow" onClick={onClose}>{cancel}</button>
-        <button className={`btn grow ${danger ? 'danger' : 'gold'}`} onClick={() => { onConfirm(); onClose(); }}>{confirm}</button>
+        <button className={`btn grow ${danger ? 'danger' : 'accent'}`} onClick={() => { onConfirm(); onClose(); }}>{confirm}</button>
       </div>
     </Sheet>
   );

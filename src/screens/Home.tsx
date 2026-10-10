@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useApp } from '../store';
 import { go } from '../router';
-import { startWorkout } from '../lib/actions';
+import { shareBackup, startWorkout } from '../lib/actions';
 import { Icon, SectionTitle, useToast } from '../components/ui';
 import { DAY_MS, fmtDuration, fmtNum, weekStart, workoutDurationSec, workoutTotals } from '../lib/calc';
 import type { Routine } from '../types';
@@ -36,6 +36,10 @@ export function Home() {
   const needBackup =
     finished.length > 0 && (!settings.lastBackupAt || Date.now() - settings.lastBackupAt > 7 * DAY_MS);
 
+  const quickBackup = async () => {
+    if ((await shareBackup()) !== 'cancelled') toast(t('backup.done'));
+  };
+
   const begin = async (r?: Routine) => {
     if (active) { toast(t('home.hasactive')); go('/active'); return; }
     await startWorkout(r ? { name: r.name, routine: r } : { name: t('wk.untitled') });
@@ -52,11 +56,14 @@ export function Home() {
           <div className="brand">Simon's Fit</div>
           <div className="muted small">{new Date().toLocaleDateString(loc, { weekday: 'long', day: 'numeric', month: 'long' })}</div>
         </div>
-        <button className="icon-btn" onClick={() => go('/settings')} aria-label={t('settings')}><Icon name="gear" /></button>
+        <div className="row">
+          <button className="icon-btn" onClick={quickBackup} aria-label={t('backup.quick')}><Icon name="download" /></button>
+          <button className="icon-btn" onClick={() => go('/settings')} aria-label={t('settings')}><Icon name="gear" /></button>
+        </div>
       </header>
 
       {needBackup && (
-        <button className="hint warn tap" onClick={() => go('/settings')}>
+        <button className="hint warn tap" onClick={quickBackup}>
           <Icon name="download" size={16} />
           <div>
             <b>{t('backup.remind.title')}</b>
@@ -66,7 +73,7 @@ export function Home() {
       )}
 
       {active && (
-        <button className="card gold-card tap" onClick={() => go('/active')}>
+        <button className="card accent-card tap" onClick={() => go('/active')}>
           <div className="row between">
             <div>
               <div className="eyebrow">{t('home.inprogress')}</div>
@@ -88,7 +95,7 @@ export function Home() {
             ))}
             {suggested.items.length > 5 && <li className="muted">+ {suggested.items.length - 5}…</li>}
           </ul>
-          <button className="btn gold block" onClick={() => begin(suggested)}><Icon name="play" size={16} /> {t('home.start')}</button>
+          <button className="btn accent block" onClick={() => begin(suggested)}><Icon name="play" size={16} /> {t('home.start')}</button>
         </div>
       )}
 
@@ -108,6 +115,14 @@ export function Home() {
           </div>
         ))}
       </div>
+
+      <button className="hint tap" onClick={() => go('/summary')}>
+        <Icon name="chart" size={16} />
+        <div>
+          <b>{t('summary.open')}</b>
+          <div className="muted small">{t('summary.good')} · {t('summary.improve')}</div>
+        </div>
+      </button>
 
       {last && lastTot && (
         <>

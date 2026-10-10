@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../store';
+import { go } from '../router';
 import { MUSCLES } from '../types';
 import { Empty, Header, Icon, SectionTitle } from '../components/ui';
 import { BarChart, LineChart } from '../components/charts';
@@ -12,7 +13,7 @@ export function Stats() {
   const [tab, setTab] = useState<Tab>('volume');
   return (
     <div className="screen">
-      <Header title={t('stats')} />
+      <Header title={t('stats')} right={<button className="icon-btn" onClick={() => go('/summary')} aria-label={t('summary.open')}><Icon name="calendar" /></button>} />
       <div className="seg">
         {(['volume', 'strength', 'activity'] as Tab[]).map((k) => (
           <button key={k} className={tab === k ? 'on' : ''} onClick={() => setTab(k)}>{t(`stats.${k}`)}</button>

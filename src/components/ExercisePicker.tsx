@@ -69,7 +69,7 @@ export function ExercisePicker({ open, onClose, onPick, exclude = [] }: {
           </div>
           <div className="picker-foot">
             <button className="btn ghost" onClick={() => setCreating(true)}><Icon name="plus" size={16} /> {t('ex.new')}</button>
-            <button className="btn gold grow" disabled={!sel.length} onClick={() => { onPick(sel); setSel([]); setQ(''); setMus(null); }}>
+            <button className="btn accent grow" disabled={!sel.length} onClick={() => { onPick(sel); setSel([]); setQ(''); setMus(null); }}>
               {t('add')} {sel.length ? `(${sel.length})` : ''}
             </button>
           </div>

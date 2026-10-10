@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store';
 import { back, go } from '../router';
-import { ConfirmSheet, Header, Icon, Menu, useToast } from '../components/ui';
+import { ConfirmSheet, Header, Icon, Menu, Sheet, useToast } from '../components/ui';
+import { buildCardModel, renderCard } from '../lib/card';
 import { computeRecords, detectPR, exerciseSessions, fmtDuration, fmtNum, isWorking, setScore, workoutDurationSec, workoutTotals } from '../lib/calc';
 import { discardWorkout, startFromPast } from '../lib/actions';
 import type { Exercise, SetEntry } from '../types';
@@ -10,6 +11,9 @@ export function WorkoutDetail({ id }: { id: number }) {
   const { t, lang, finished, exMap, exName, active } = useApp();
   const toast = useToast();
   const [del, setDel] = useState(false);
+  const [cardOpen, setCardOpen] = useState(false);
+  const [cardBlob, setCardBlob] = useState<Blob | null>(null);
+  const [cardUrl, setCardUrl] = useState('');
   const w = finished.find((x) => x.id === id);
   const loc = lang === 'pt' ? 'pt-PT' : 'en-GB';
 
@@ -30,6 +34,30 @@ export function WorkoutDetail({ id }: { id: number }) {
     }
     return out;
   }, [w, finished, exMap]);
+
+  useEffect(() => {
+    if (!cardOpen || !w) return;
+    let url = '';
+    let dead = false;
+    const model = buildCardModel(w, finished, exMap, lang, exName, {
+      duration: t('duration'), sets: t('sets'), volume: t('volume'), setsLc: t('sets.lc'), prs: t('summary.prs')
+    });
+    renderCard(model, t('card.more'), t('card.pr'))
+      .then((b) => {
+        if (dead) return;
+        url = URL.createObjectURL(b);
+        setCardBlob(b);
+        setCardUrl(url);
+      })
+      .catch(() => { if (!dead) { toast(t('card.failed')); setCardOpen(false); } });
+    return () => {
+      dead = true;
+      if (url) URL.revokeObjectURL(url);
+      setCardBlob(null);
+      setCardUrl('');
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cardOpen, w, lang]);
 
   if (!w) return <div className="screen"><Header title="?" onBack backTo="/history" /></div>;
   const tot = workoutTotals(w, exMap);
@@ -60,6 +88,21 @@ export function WorkoutDetail({ id }: { id: number }) {
     } catch { /* cancelado */ }
   };
 
+  const shareCard = async () => {
+    if (!cardBlob) return;
+    const name = `simons-fit-${new Date(w.startedAt).toISOString().slice(0, 10)}.png`;
+    const file = new File([cardBlob], name, { type: 'image/png' });
+    try {
+      if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: w.name });
+      else {
+        const a = document.createElement('a');
+        a.href = cardUrl;
+        a.download = name;
+        a.click();
+      }
+    } catch { /* cancelado */ }
+  };
+
   const repeat = async () => {
     if (active) { toast(t('home.hasactive')); go('/active'); return; }
     await startFromPast(w);
@@ -77,6 +120,7 @@ export function WorkoutDetail({ id }: { id: number }) {
           <Menu items={[
             { label: t('detail.repeat'), icon: 'repeat', onClick: repeat },
             { label: t('detail.edit'), icon: 'edit', onClick: () => go(`/edit/${id}`) },
+            { label: t('card.menu'), icon: 'image', onClick: () => setCardOpen(true) },
             { label: t('detail.share'), icon: 'share', onClick: share },
             { label: t('delete'), icon: 'trash', danger: true, onClick: () => setDel(true) }
           ]} />
@@ -106,6 +150,12 @@ export function WorkoutDetail({ id }: { id: number }) {
           </section>
         );
       })}
+      <Sheet open={cardOpen} onClose={() => setCardOpen(false)} title={t('card.title')}>
+        {cardUrl ? <img className="card-preview" src={cardUrl} alt={w.name} /> : <div className="muted center" style={{ padding: 40 }}>…</div>}
+        <button className="btn accent block" disabled={!cardBlob} onClick={shareCard}>
+          <Icon name="share" size={16} /> {typeof navigator.canShare === 'function' ? t('card.share') : t('card.save')}
+        </button>
+      </Sheet>
       <ConfirmSheet
         open={del}
         title={t('detail.delete.title')}

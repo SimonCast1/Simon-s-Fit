@@ -105,12 +105,26 @@ describe.skipIf(!has)('fluxo completo na interface', () => {
     mount();
     expect(await screen.findByText('Superior B')).toBeTruthy();
     await nav('#/stats');
-    expect(await screen.findByText('Séries por músculo (indiretas ×0,5). A marca dourada é o teu mínimo semanal.')).toBeTruthy();
+    expect(await screen.findByText('Séries por músculo (indiretas ×0,5). A marca vertical é o teu mínimo semanal.')).toBeTruthy();
     const user = userEvent.setup();
     await user.click(screen.getByRole('button', { name: 'Força' }));
     expect(await screen.findByText('1RM estimado')).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Atividade' }));
     expect(await screen.findByText('Treinos por semana')).toBeTruthy();
+  });
+
+  it('calendário do histórico e resumo semanal abrem com os dados do Hevy', async () => {
+    const user = userEvent.setup();
+    await nav('#/history');
+    mount();
+    await user.click(await screen.findByRole('button', { name: 'Calendário' }));
+    expect(await screen.findByText(/treinos neste mês/)).toBeTruthy();
+    await nav('#/summary');
+    expect(await screen.findByRole('heading', { name: 'Resumo semanal' })).toBeTruthy();
+    expect(screen.getByText('O que está bem')).toBeTruthy();
+    expect(screen.getByText('A melhorar')).toBeTruthy();
+    await user.click(screen.getByRole('button', { name: 'prev' }));
+    expect(screen.getByText('Séries por músculo')).toBeTruthy();
   });
 
   it('exercício: recordes e histórico com dados do Hevy', async () => {

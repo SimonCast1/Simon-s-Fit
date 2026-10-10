@@ -7,7 +7,7 @@ Tracker de treinos pessoal, feito à medida do plano dos documentos de referênc
 **Treino**
 - Em cada série mostra sempre o que fizeste **da última vez** no mesmo exercício (carga × reps). Tocar no valor copia-o.
 - Concluir uma série sem escrever nada usa os valores previstos (a meta ou o anterior): um toque por série.
-- Cronómetro de descanso por exercício (compostos 150 s, isolamento 90 s, editável), com som/vibração.
+- Cronómetro de descanso por exercício (compostos 150 s, isolamento 90 s, editável), com som (a vibração não existe no Safari do iPhone).
 - Séries de aquecimento, RIR por série, notas, supersérie, substituir/reordenar exercícios, treino vazio.
 - O treino em curso sobrevive a fechar a app ou a bloquear o telemóvel.
 
@@ -21,11 +21,13 @@ Tracker de treinos pessoal, feito à medida do plano dos documentos de referênc
 **Resto**
 - Rotinas pré-carregadas do documento 1: Superior A, Inferior, Superior B, Full body (com supersérie bíceps+tríceps). Sugere a do dia (seg/ter/qua/sex).
 - Biblioteca de 76 exercícios (PT-PT e EN), personalizável: músculo principal/secundários, incremento, faixa de reps, descanso.
-- Histórico, detalhe, repetir/editar treino, partilhar como texto.
+- Histórico em lista ou **calendário** (dias treinados, sequência de semanas a cumprir a meta), detalhe, repetir/editar treino, partilhar como texto.
+- **Cartão do treino:** imagem (PNG) com duração, séries, volume, melhor série de cada exercício e PRs, para partilhar (menu ⋯ no detalhe do treino).
 - Estatísticas: volume semanal por músculo vs. mínimo, evolução de força por exercício, treinos por semana.
+- **Resumo semanal:** treinos, séries e volume contra a semana anterior, com notas do que está bem e do que melhorar (consistência, mínimos por músculo, estagnação, deload, backup).
 - **Importar do Hevy** (CSV) sem duplicar se importares duas vezes; deteta aquecimentos (opcional).
 - **Partilha de rotinas** por link ou QR code.
-- **Backup/restauro** em JSON.
+- **Backup num toque** (ícone ⬇ no Início): abre a folha de partilha do iOS para guardar em Ficheiros/iCloud. Restauro a partir do JSON.
 - Português (PT) e inglês.
 
 ## Publicar (grátis, GitHub Pages)
@@ -54,7 +56,7 @@ Os dados vivem **só** no telemóvel. Em **Definições → Exportar backup** gu
 ## Limitações conhecidas (inerentes a ser PWA e 0 €)
 
 - Sem widget, Apple Watch nem Apple Health (exigem app nativa e conta Apple Developer de 99 $/ano).
-- No iOS, o som/vibração do fim do descanso só funcionam com a app aberta (o tempo continua certo ao voltares à app). Não há notificações com a app fechada.
+- No iOS, o som do fim do descanso só funciona com a app aberta e a vibração não é suportada (o tempo continua certo ao voltares à app). Não há notificações com a app fechada.
 - Sem sincronização entre dispositivos: cada telemóvel tem os seus dados. Para passar uma rotina a outra pessoa usa o link/QR.
 
 ## Desenvolvimento

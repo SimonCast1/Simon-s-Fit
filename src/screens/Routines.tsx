@@ -36,7 +36,7 @@ export function Routines() {
     <div className="screen">
       <Header title={t('routines')} right={<button className="icon-btn" onClick={() => go('/routine/new')} aria-label={t('routine.new')}><Icon name="plus" /></button>} />
       {routines.length === 0 && (
-        <Empty title={t('routines.empty')} text={t('routines.empty.text')} action={<button className="btn gold" onClick={() => go('/routine/new')}>{t('routine.new')}</button>} />
+        <Empty title={t('routines.empty')} text={t('routines.empty.text')} action={<button className="btn accent" onClick={() => go('/routine/new')}>{t('routine.new')}</button>} />
       )}
       {routines.map((r, i) => (
         <div key={r.id} className="card">
@@ -60,7 +60,7 @@ export function Routines() {
           <div className="small ex-list-line">
             {r.items.map((it) => exName(exMap.get(it.exerciseId))).join(' · ')}
           </div>
-          <button className="btn gold block" style={{ marginTop: 12 }} onClick={() => begin(r)}><Icon name="play" size={16} /> {t('home.start')}</button>
+          <button className="btn accent block" style={{ marginTop: 12 }} onClick={() => begin(r)}><Icon name="play" size={16} /> {t('home.start')}</button>
         </div>
       ))}
 
@@ -80,7 +80,7 @@ export function Routines() {
           <div className="center">
             <img src={share.qr} alt="QR" className="qr" />
             <p className="muted small">{t('share.hint')}</p>
-            <button className="btn gold block" onClick={copyLink}><Icon name="share" size={16} /> {t('share.link')}</button>
+            <button className="btn accent block" onClick={copyLink}><Icon name="share" size={16} /> {t('share.link')}</button>
           </div>
         )}
       </Sheet>
