@@ -5,10 +5,11 @@ import { useApp } from '../store';
 import type { Exercise, SetEntry, Workout, WorkoutExercise } from '../types';
 import {
   addWorkoutVolume, computeRecords, detectPR, emptyVolume, exerciseSessions, fmtDuration, fmtNum,
-  lastSession, parseNum, setScore, stagnationSessions, suggestProgression, weekStart, weeklyVolume,
+  parseNum, setScore, setTarget, stagnationSessions, startingWeight, suggestProgression, weekStart, weeklyVolume,
   type Records, type Session, type Suggestion, newId, DAY_MS
 } from '../lib/calc';
-import { discardWorkout, finishWorkout, patchWorkout } from '../lib/actions';
+import { applyRoutineChanges, discardWorkout, finishWorkout, patchWorkout } from '../lib/actions';
+import { diffWorkoutRoutine, type RoutineChange } from '../lib/routineDiff';
 import { go } from '../router';
 import { ConfirmSheet, Header, Icon, Menu, NumInput, Sheet, useToast } from '../components/ui';
 import { ExercisePicker } from '../components/ExercisePicker';
@@ -62,42 +63,50 @@ function prevLabel(ex: Exercise, s: SetEntry | undefined, lang: 'pt' | 'en'): st
   }
 }
 
+function tgtLabel(ex: Exercise, t: { weight: number; reps: number }, lang: 'pt' | 'en'): string {
+  if (ex.kind === 'bodyweight') return t.weight ? `+${fmtNum(t.weight, lang)} × ${t.reps}` : String(t.reps);
+  return `${fmtNum(t.weight, lang)} × ${t.reps}`;
+}
+
 interface ExInfo {
   ex: Exercise;
   last?: Session;
   records: Records;
   stagnant: number;
   sugg: Suggestion | null;
+  /** carga inicial estimada quando não há histórico */
+  start?: { weight: number; from: string };
 }
 
 /* ---------- linha de série ---------- */
 
-function SetRow({ ex, set, idx, prev, lang, sugg, pr, readOnly, onPatch, onDone, onMenu, onCopy }: {
-  ex: Exercise; set: SetEntry; idx: number; prev?: SetEntry; lang: 'pt' | 'en'; sugg: Suggestion | null;
+function SetRow({ ex, set, idx, prev, target, lang, sugg, startW, pr, readOnly, onPatch, onDone, onMenu, onCopy, onTarget }: {
+  ex: Exercise; set: SetEntry; idx: number; prev?: SetEntry; target?: { weight: number; reps: number }; lang: 'pt' | 'en';
+  sugg: Suggestion | null; startW?: number;
   pr: boolean; readOnly?: boolean;
   onPatch: (p: Partial<SetEntry>) => void;
   onDone: (p: Partial<SetEntry>) => void;
   onMenu: () => void;
   onCopy: () => void;
+  onTarget: () => void;
 }) {
   const f = (n: number | undefined) => (n === undefined ? '' : fmtNum(n, lang, 2));
   const [w, setW] = useState(f(set.weight));
   const [r, setR] = useState(f(set.reps));
-  const [rir, setRir] = useState(f(set.rir));
   const [dur, setDur] = useState(ex.kind === 'cardio' ? f(set.durationSec ? set.durationSec / 60 : undefined) : f(set.durationSec));
   const [dist, setDist] = useState(f(set.distanceKm));
 
   useEffect(() => {
-    setW(f(set.weight)); setR(f(set.reps)); setRir(f(set.rir));
+    setW(f(set.weight)); setR(f(set.reps));
     setDur(ex.kind === 'cardio' ? f(set.durationSec ? set.durationSec / 60 : undefined) : f(set.durationSec));
     setDist(f(set.distanceKm));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [set.weight, set.reps, set.rir, set.durationSec, set.distanceKm, lang]);
+  }, [set.weight, set.reps, set.durationSec, set.distanceKm, lang]);
 
-  // marcadores de posição: meta (se sobe de carga) ou o que fizeste da última vez
-  const useTarget = sugg?.kind === 'increase';
-  const phW = useTarget ? sugg!.weight : prev?.weight;
-  const phR = useTarget ? sugg!.reps : prev?.reps;
+  // marcadores de posição: meta quando muda a carga (subir/descer); senão o que fizeste da última vez
+  const useTarget = (sugg?.kind === 'increase' || sugg?.kind === 'decrease') && target !== undefined;
+  const phW = useTarget ? target!.weight : prev?.weight ?? startW;
+  const phR = useTarget ? target!.reps : prev?.reps;
   const phDur = prev?.durationSec;
   const phDist = prev?.distanceKm;
 
@@ -107,8 +116,6 @@ function SetRow({ ex, set, idx, prev, lang, sugg, pr, readOnly, onPatch, onDone,
       const wv = parseNum(w);
       p.weight = wv;
       p.reps = parseNum(r) !== undefined ? Math.round(parseNum(r)!) : undefined;
-      const rv = parseNum(rir);
-      p.rir = rv !== undefined ? Math.max(0, Math.round(rv)) : undefined;
     } else if (ex.kind === 'time') {
       p.durationSec = parseNum(dur);
     } else {
@@ -153,9 +160,11 @@ function SetRow({ ex, set, idx, prev, lang, sugg, pr, readOnly, onPatch, onDone,
       </button>
       {(ex.kind === 'weight' || ex.kind === 'bodyweight') && (
         <>
+          <button className="s-prev s-target" onClick={onTarget} disabled={!target || set.done || readOnly}>
+            {target ? tgtLabel(ex, target, lang) : '–'}
+          </button>
           <NumInput value={w} onChange={setW} onBlur={commit} placeholder={phW !== undefined ? fmtNum(phW, lang, 2) : ex.kind === 'bodyweight' ? '+' : ''} ariaLabel="kg" />
           <NumInput value={r} onChange={setR} onBlur={commit} inputMode="numeric" placeholder={phR !== undefined ? String(phR) : ''} ariaLabel="reps" />
-          <NumInput value={rir} onChange={setRir} onBlur={commit} inputMode="numeric" className="rir" placeholder="·" ariaLabel="RIR" />
         </>
       )}
       {ex.kind === 'time' && (
@@ -177,7 +186,7 @@ function SetRow({ ex, set, idx, prev, lang, sugg, pr, readOnly, onPatch, onDone,
 /* ---------- ecrã principal ---------- */
 
 export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }) {
-  const { t, lang, settings, exMap, exName, finished, startRest, skipRest, deload } = useApp();
+  const { t, lang, settings, routines, exMap, exName, finished, startRest, skipRest, deload } = useApp();
   const toast = useToast();
   const w = useLiveQuery(() => db.workouts.get(id), [id]);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -189,6 +198,7 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
   const [setMenu, setSetMenu] = useState<{ ei: number; si: number } | null>(null);
   const [noteFor, setNoteFor] = useState<number | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
+  const [saveIdx, setSaveIdx] = useState<Set<number>>(new Set());
   const [hideDeload, setHideDeload] = useState(() => sessionStorage.getItem('hideDeload') === '1');
 
   useWakeLock(!editing && settings.keepAwake);
@@ -208,18 +218,15 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
       if (!ex) continue;
       const sessions = exerciseSessions(prior, ex, ex.id);
       const last = sessions.at(-1);
-      const rirMin = we.rir ? parseInt(we.rir, 10) : undefined;
+      const repMin = we.repMin ?? ex.repMin;
+      const repMax = we.repMax ?? ex.repMax;
       m.set(ex.id, {
         ex,
         last,
         records: computeRecords(sessions),
         stagnant: stagnationSessions(sessions),
-        sugg: suggestProgression(ex, last, {
-          repMin: we.repMin ?? ex.repMin,
-          repMax: we.repMax ?? ex.repMax,
-          plannedSets: we.planned,
-          rirMin: Number.isFinite(rirMin) ? rirMin : undefined
-        })
+        sugg: suggestProgression(ex, last, { repMin, repMax, plannedSets: we.planned, prev: sessions.at(-2) }),
+        start: last ? undefined : startingWeight(ex, prior, exMap, repMin, repMax)
       });
     }
     return m;
@@ -292,6 +299,7 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
     if (ei === null || !ids[0]) return;
     const ex = exMap.get(ids[0]);
     void patch((x) => {
+      if (!x.exercises[ei].replacedFrom && x.exercises[ei].exerciseId !== ids[0]) x.exercises[ei].replacedFrom = x.exercises[ei].exerciseId;
       x.exercises[ei].exerciseId = ids[0];
       x.exercises[ei].repMin = ex?.repMin;
       x.exercises[ei].repMax = ex?.repMax;
@@ -321,16 +329,49 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
       b.supersetId = sid;
     });
 
+  const applyTargets = (ei: number, info: ExInfo) => {
+    const we = w.exercises[ei];
+    const repMax = we.repMax ?? info.ex.repMax;
+    void patch((x) => {
+      let n = 0;
+      for (const s of x.exercises[ei].sets) {
+        if (s.warmup) continue;
+        const tg = setTarget(info.sugg, info.last, n, repMax);
+        n++;
+        if (!s.done && tg) { s.weight = tg.weight; s.reps = tg.reps; }
+      }
+    });
+  };
+
+  const changeText = (c: RoutineChange): string => {
+    const n = (id: string) => exName(exMap.get(id));
+    switch (c.kind) {
+      case 'replace': return t('chg.replace', { from: n(c.fromId), to: n(c.toId) });
+      case 'add': return t('chg.add', { ex: n(c.exerciseId), n: c.sets });
+      case 'remove': return t('chg.remove', { ex: n(c.exerciseId) });
+      case 'sets': return t('chg.sets', { ex: n(c.exerciseId), from: c.from, to: c.to });
+    }
+  };
+
   const doneSets = w.exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);
   const undoneSets = w.exercises.reduce((n, e) => n + e.sets.filter((s) => !s.done).length, 0);
+
+  const routine = !editing && w.routineId !== undefined ? routines.find((r) => r.id === w.routineId) : undefined;
+  const changes: RoutineChange[] = routine && doneSets > 0 ? diffWorkoutRoutine(w, routine) : [];
 
   const finish = async () => {
     setFinishOpen(false);
     if (doneSets === 0) { setDiscardOpen(true); return; }
     skipRest();
+    const chosen = changes.filter((_, i) => saveIdx.has(i));
+    if (routine?.id !== undefined && chosen.length) await applyRoutineChanges(routine.id, chosen);
     await finishWorkout(id, { keepEnd: !!editing });
-    toast(editing ? t('wk.saved') : t('wk.finished'));
-    go(`/workout/${id}`, true);
+    if (editing) {
+      toast(t('wk.saved'));
+      go(`/workout/${id}`, true);
+    } else {
+      go(`/done/${id}`, true);
+    }
   };
 
   const doDiscard = async () => {
@@ -352,7 +393,7 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
           </button>
         }
         sub={editing ? new Date(w.startedAt).toLocaleDateString(lang === 'pt' ? 'pt-PT' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : <><Elapsed start={w.startedAt} /> · {doneSets} {t('sets.lc')}</>}
-        right={<button className="btn accent sm" onClick={() => setFinishOpen(true)}>{editing ? t('save') : t('finish')}</button>}
+        right={<button className="btn accent sm" onClick={() => { setSaveIdx(new Set()); setFinishOpen(true); }}>{editing ? t('save') : t('finish')}</button>}
       />
 
       {!editing && deload && !hideDeload && (
@@ -394,9 +435,8 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
 
         const minSets = ex.primary ? settings.minSets[ex.primary] : undefined;
         const volNow = ex.primary ? weekVol[ex.primary] : 0;
-        const rirTxt = we.rir ? ` · RIR ${we.rir}` : '';
         const targetTxt = (ex.kind === 'weight' || ex.kind === 'bodyweight')
-          ? `${we.planned ?? we.sets.length} × ${we.repMin ?? ex.repMin}–${we.repMax ?? ex.repMax}${rirTxt}`
+          ? `${we.planned ?? we.sets.length} × ${we.repMin ?? ex.repMin}–${we.repMax ?? ex.repMax}`
           : '';
         const pending = we.sets.some((s) => !s.done && !s.warmup);
 
@@ -428,27 +468,27 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
             </div>
 
             {/* alertas discretos */}
-            {!editing && (sugg || (info && info.stagnant > 0)) && (
+            {!editing && (sugg || info?.start || (info && info.stagnant > 0)) && (
               <div className="ex-hints">
-                {sugg?.kind === 'increase' && (
-                  <button
-                    className="hint-chip accent"
-                    onClick={() => patch((x) => {
-                      for (const s of x.exercises[ei].sets) if (!s.done && !s.warmup) { s.weight = sugg.weight; s.reps = sugg.reps; }
-                    })}
-                  >
-                    <Icon name="arrowUp" size={13} />
-                    {sugg.extra ? t('prog.extra', { w: fmtNum(sugg.weight, lang) }) : t('prog.up', { w: fmtNum(sugg.weight, lang), r: sugg.reps })}
+                {sugg && (sugg.kind !== 'hold' || pending) && (
+                  <button className={`hint-chip ${sugg.kind === 'hold' ? '' : sugg.kind === 'decrease' ? 'warn' : 'accent'}`} onClick={() => applyTargets(ei, info!)}>
+                    {sugg.kind === 'increase' && <Icon name="up" size={13} />}
+                    {sugg.kind === 'decrease' && <Icon name="down" size={13} />}
+                    {sugg.kind === 'increase'
+                      ? (sugg.extra ? t('prog.extra', { w: fmtNum(sugg.weight, lang) }) : t('prog.up', { w: fmtNum(sugg.weight, lang), r: sugg.reps }))
+                      : sugg.kind === 'decrease'
+                        ? t('prog.down', { w: fmtNum(sugg.weight, lang), r: sugg.reps })
+                        : ex.kind === 'bodyweight' && !sugg.weight
+                          ? t('prog.hold.bw', { r: sugg.reps })
+                          : t('prog.hold', { w: fmtNum(sugg.weight, lang), r: sugg.reps })}
                   </button>
                 )}
-                {sugg?.kind === 'hold' && pending && (
+                {info?.start && pending && (
                   <button
                     className="hint-chip"
-                    onClick={() => patch((x) => {
-                      for (const s of x.exercises[ei].sets) if (!s.done && !s.warmup) { s.weight = sugg.weight; s.reps = sugg.reps; }
-                    })}
+                    onClick={() => patch((x) => { for (const s of x.exercises[ei].sets) if (!s.done && !s.warmup) s.weight = info.start!.weight; })}
                   >
-                    {t('prog.hold', { w: fmtNum(sugg.weight, lang), r: sugg.reps })}
+                    {t('prog.start', { w: fmtNum(info.start.weight, lang), ex: exName(exMap.get(info.start.from)) })}
                   </button>
                 )}
                 {info && info.stagnant > 0 && (
@@ -456,16 +496,21 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
                 )}
               </div>
             )}
+            {!editing && sugg && pending && (
+              <div className="ex-why">
+                {t(ex.kind === 'bodyweight' && !sugg.from && sugg.reason === 'reps' ? 'why.reps.bw' : `why.${sugg.reason}`, { from: fmtNum(sugg.from, lang), min: sugg.min })}
+              </div>
+            )}
 
             {we.note && <div className="ex-note">{we.note}</div>}
 
             <div className={`sets-head k-${ex.kind}`}>
-              <span>{t('set')}</span>
+              <span>#</span>
               <span>{t('previous')}</span>
-              {(ex.kind === 'weight' || ex.kind === 'bodyweight') && <><span>{ex.kind === 'bodyweight' ? '+kg' : 'kg'}</span><span>reps</span><span>RIR</span></>}
+              {(ex.kind === 'weight' || ex.kind === 'bodyweight') && <><span>{t('target')}</span><span>{ex.kind === 'bodyweight' ? '+kg' : 'kg'}</span><span>reps</span></>}
               {ex.kind === 'time' && <span>{t('seconds')}</span>}
               {ex.kind === 'cardio' && <><span>min</span><span>km</span></>}
-              <span />
+              <span>{t('done')}</span>
             </div>
 
             {(() => {
@@ -474,6 +519,7 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
                 if (!s.warmup) n++;
                 const pi = si < (last?.sets.length ?? 0) ? si : (last?.sets.length ?? 1) - 1;
                 const prev = last?.sets[pi];
+                const target = s.warmup ? undefined : setTarget(sugg, last, n - 1, we.repMax ?? ex.repMax);
                 return (
                   <SetRow
                     key={si}
@@ -481,6 +527,8 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
                     set={s}
                     idx={n}
                     prev={prev}
+                    target={target}
+                    startW={info?.start?.weight}
                     lang={lang}
                     sugg={sugg}
                     pr={si === prIdx}
@@ -488,6 +536,7 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
                     onPatch={(p) => setPatch(ei, si, p)}
                     onDone={(p) => onDone(ei, si, p)}
                     onMenu={() => setSetMenu({ ei, si })}
+                    onTarget={() => target && setPatch(ei, si, { weight: target.weight, reps: target.reps })}
                     onCopy={() => prev && setPatch(ei, si, {
                       weight: prev.weight, reps: prev.reps, durationSec: prev.durationSec, distanceKm: prev.distanceKm
                     })}
@@ -514,6 +563,25 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
           {t('wk.finish.sum', { n: doneSets })}
           {undoneSets > 0 && <> {t('wk.finish.drop', { n: undoneSets })}</>}
         </p>
+        {changes.length > 0 && (
+          <div className="chg-box">
+            <div className="row between chg-head">
+              <b>{t('chg.title')}</b>
+              <button className="linklike small accent-t" onClick={() => setSaveIdx(saveIdx.size === changes.length ? new Set() : new Set(changes.map((_, i) => i)))}>
+                {saveIdx.size === changes.length ? t('chg.none') : t('chg.all')}
+              </button>
+            </div>
+            {changes.map((c, i) => (
+              <div key={i} className="chg-row">
+                <div className="chg-txt">{changeText(c)}</div>
+                <div className="seg chg-seg">
+                  <button className={!saveIdx.has(i) ? 'on' : ''} onClick={() => setSaveIdx((p) => { const n = new Set(p); n.delete(i); return n; })}>{t('chg.once')}</button>
+                  <button className={saveIdx.has(i) ? 'on' : ''} onClick={() => setSaveIdx((p) => new Set(p).add(i))}>{t('chg.save')}</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="row gap">
           <button className="btn ghost grow" onClick={() => setFinishOpen(false)}>{t('wk.continue')}</button>
           <button className="btn accent grow" onClick={finish}>{editing ? t('save') : t('finish')}</button>

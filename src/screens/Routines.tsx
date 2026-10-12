@@ -3,6 +3,7 @@ import { useApp } from '../store';
 import { go } from '../router';
 import { deleteRoutine, duplicateRoutine, moveRoutine, saveRoutine, startWorkout } from '../lib/actions';
 import { ConfirmSheet, Empty, Header, Icon, Menu, Sheet, useToast } from '../components/ui';
+import { PlanVolume } from '../components/PlanVolume';
 import { encodeRoutine, qrDataUrl, shareLink } from '../lib/share';
 import type { Routine } from '../types';
 
@@ -64,6 +65,7 @@ export function Routines() {
         </div>
       ))}
 
+      {routines.length > 0 && <PlanVolume routines={routines} />}
       <ConfirmSheet
         open={!!del}
         title={t('routine.delete.title')}

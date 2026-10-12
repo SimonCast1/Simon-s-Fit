@@ -156,6 +156,7 @@ textarea.inp { resize: none; }
 .inp-num { height: 44px; background: var(--surface); }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .grid5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .err { color: var(--danger); font-size: 13px; margin-top: 10px; }
 .form { display: block; }
 
@@ -186,7 +187,7 @@ textarea.inp { resize: none; }
 .sets-head { font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); text-align: center; margin-bottom: 4px; }
 .sets-head span:nth-child(2) { text-align: center; }
 .srow { position: relative; padding: 4px; border-radius: var(--r); transition: background 0.2s; }
-.sets-head.k-weight, .srow.k-weight, .sets-head.k-bodyweight, .srow.k-bodyweight { grid-template-columns: 30px 1fr 64px 54px 40px 42px; }
+.sets-head.k-weight, .srow.k-weight, .sets-head.k-bodyweight, .srow.k-bodyweight { grid-template-columns: 28px 1fr 1fr 58px 46px 42px; }
 .sets-head.k-time, .srow.k-time { grid-template-columns: 30px 1fr 96px 42px; }
 .sets-head.k-cardio, .srow.k-cardio { grid-template-columns: 30px 1fr 66px 66px 42px; }
 .srow.done { background: var(--accent-soft); }
@@ -196,7 +197,6 @@ textarea.inp { resize: none; }
 .s-prev { text-align: center; color: var(--muted); font-size: 13px; padding: 8px 2px; border-radius: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .s-prev:not(:disabled):active { background: var(--surface2); color: var(--text); }
 .srow.done .s-prev { opacity: 0.55; }
-.num.rir { color: var(--muted); font-weight: 500; }
 .num.wide { font-size: 17px; }
 .s-check { width: 40px; height: 40px; border-radius: var(--r); border: 1px solid var(--line2); display: grid; place-items: center; color: transparent; background: var(--bg2); }
 .s-check.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
@@ -296,3 +296,21 @@ textarea.inp { resize: none; }
 .delta.up { color: var(--ok); }
 .delta.down { color: var(--warn); }
 .card-preview { width: 100%; border-radius: var(--r); display: block; margin: 0 auto 12px; background: var(--bg2); }
+
+/* ---------- metas e alterações à rotina ---------- */
+.s-prev, .s-target { font-size: 12.5px; padding: 8px 0; }
+.s-target { color: var(--accent); }
+.s-target:disabled { color: var(--accent); opacity: 0.85; }
+.srow.done .s-target { opacity: 0.4; }
+.sets-head span:last-child { color: var(--accent); }
+.ex-why { padding: 0 6px 8px; color: var(--muted); font-size: 12.5px; }
+.accent-t { color: var(--accent); }
+.chg-box { border: 1px solid var(--line2); border-radius: var(--r); padding: 10px 12px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; max-height: 42dvh; overflow-y: auto; }
+.chg-head { align-items: center; }
+.chg-row { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
+.chg-txt { font-size: 14px; }
+.chg-seg button { font-size: 12.5px; padding: 7px 4px; }
+
+.chip-s { display: inline-flex; align-items: center; gap: 3px; font-size: 12px; padding: 2px 7px; border-radius: var(--r-sm); border: 1px solid var(--line2); color: var(--muted); white-space: nowrap; }
+.chip-s.up { color: var(--ok); border-color: rgba(147, 181, 141, 0.4); }
+.chip-s.down { color: var(--warn); border-color: rgba(227, 168, 87, 0.4); }

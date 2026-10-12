@@ -52,8 +52,15 @@ describe.skipIf(!has)('fluxo completo na interface', () => {
     expect(rows[2].querySelector('.s-prev')!.textContent).toBe('22,5 × 7');
     // meta de dupla progressão (ainda não chegou a 12 em todas as séries)
     expect(within(firstCard).getByText(/Meta: 22,5 kg × 8/)).toBeTruthy();
-    // alvo da rotina e volume semanal
-    expect(within(firstCard).getByText(/3 × 8–12 · RIR 1–2/)).toBeTruthy();
+    expect(within(firstCard).getByText(/tenta \+1 rep na mais fraca/)).toBeTruthy();
+    // coluna "Meta" série a série e sem campo de RIR
+    expect(rows[0].querySelector('.s-target')!.textContent).toBe('22,5 × 12');
+    expect(rows[1].querySelector('.s-target')!.textContent).toBe('22,5 × 9');
+    expect(rows[2].querySelector('.s-target')!.textContent).toBe('22,5 × 8');
+    expect(firstCard.querySelector('input[aria-label="RIR"]')).toBeNull();
+    expect(within(firstCard).getByText('Feito')).toBeTruthy();
+    // alvo da rotina
+    expect(within(firstCard).getByText(/^3 × 8–12$/)).toBeTruthy();
 
     // pull up (peso corporal): anterior = reps
     const pull = screen.getByText('Elevações (Barra Fixa)').closest('.ex-card') as HTMLElement;
@@ -87,9 +94,22 @@ describe.skipIf(!has)('fluxo completo na interface', () => {
     expect(await screen.findByText(/2 séries concluídas\./)).toBeTruthy();
     expect(screen.getByText(/séries por concluir serão descartadas/)).toBeTruthy();
     const sheet = screen.getByRole('dialog');
+    // alterações face à rotina: por defeito "só neste treino"
+    expect(within(sheet).getByText('Alterações face à rotina')).toBeTruthy();
+    expect(within(sheet).getAllByText(/Não fizeste/).length).toBeGreaterThan(0);
+    expect(within(sheet).getByText('Supino Inclinado com Halteres: 3 → 2 séries')).toBeTruthy();
     await user.click(within(sheet).getByRole('button', { name: 'Terminar' }));
 
-    await waitFor(() => expect(window.location.hash).toMatch(/^#\/workout\/\d+$/));
+    // resumo e análise do treino
+    await waitFor(() => expect(window.location.hash).toMatch(/^#\/done\/\d+$/));
+    expect(await screen.findByRole('heading', { name: 'Treino concluído' })).toBeTruthy();
+    expect(screen.getByText('O que está bem')).toBeTruthy();
+    expect(screen.getByText('A melhorar')).toBeTruthy();
+    // a rotina não mudou (só neste treino)
+    const routineAfter = (await db.routines.toArray()).find((r) => r.name === 'Superior B')!;
+    expect(routineAfter.items.length).toBeGreaterThan(5);
+    expect(routineAfter.items[0].sets).toBe(3);
+    await nav('#/workout/' + window.location.hash.split('/')[2]);
     const done = (await db.workouts.toArray()).filter((w) => w.endedAt && w.name === 'Superior B');
     expect(done).toHaveLength(1);
     expect(done[0].exercises).toHaveLength(1);

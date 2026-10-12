@@ -54,7 +54,7 @@ A opção **Detetar aquecimentos** marca como aquecimento as séries iniciais co
 
 ## Backup (importante)
 
-Os dados vivem **só** no telemóvel. Em **Definições → Exportar backup** guarda o ficheiro `.json` em Ficheiros/iCloud. A app lembra-te quando passa mais de uma semana sem backup. Para trocar de telemóvel: **Restaurar backup**.
+Os dados vivem **só** no telemóvel. Em **Definições → Exportar backup** guarda o ficheiro `simons-fit-backup.json` em Ficheiros/iCloud, sempre na mesma pasta, e escolhe **Substituir** (assim só fica um ficheiro). A app lembra-te quando passa mais de uma semana sem backup. Para trocar de telemóvel: **Restaurar backup**.
 
 ## Limitações conhecidas (inerentes a ser PWA e 0 €)
 

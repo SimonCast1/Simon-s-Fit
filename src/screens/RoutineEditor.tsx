@@ -5,13 +5,14 @@ import { back, go } from '../router';
 import { saveRoutine } from '../lib/actions';
 import { Header, Icon, NumInput, useToast } from '../components/ui';
 import { ExercisePicker } from '../components/ExercisePicker';
+import { PlanVolume } from '../components/PlanVolume';
 import { newId, parseNum } from '../lib/calc';
 import type { Routine, RoutineItem } from '../types';
 
 const DOWS = [1, 2, 3, 4, 5, 6, 0];
 
 export function RoutineEditor({ id }: { id: number | 'new' }) {
-  const { t, exMap, exName } = useApp();
+  const { t, exMap, exName, routines } = useApp();
   const toast = useToast();
   const [r, setR] = useState<Routine | null>(null);
   const [picker, setPicker] = useState(false);
@@ -95,18 +96,17 @@ export function RoutineEditor({ id }: { id: number | 'new' }) {
                 <button className="icon-btn sm" onClick={() => upd((x) => { x.items.splice(i, 1); })} aria-label="remove"><Icon name="trash" size={16} /></button>
               </div>
             </div>
-            <div className="grid5">
+            <div className="grid3">
               <div><label className="lbl sm">{t('sets')}</label><NumInput className="inp-num" inputMode="numeric" value={String(it.sets)} onChange={(v) => setItem(i, { sets: num(v, 1) || 1 })} /></div>
               <div><label className="lbl sm">{t('ex.repmin')}</label><NumInput className="inp-num" inputMode="numeric" value={String(it.repMin)} onChange={(v) => setItem(i, { repMin: num(v, 1) })} /></div>
               <div><label className="lbl sm">{t('ex.repmax')}</label><NumInput className="inp-num" inputMode="numeric" value={String(it.repMax)} onChange={(v) => setItem(i, { repMax: Math.max(it.repMin, num(v, 1)) })} /></div>
-              <div><label className="lbl sm">RIR min</label><NumInput className="inp-num" inputMode="numeric" value={String(it.rirMin)} onChange={(v) => setItem(i, { rirMin: num(v, 0) })} /></div>
-              <div><label className="lbl sm">RIR max</label><NumInput className="inp-num" inputMode="numeric" value={String(it.rirMax)} onChange={(v) => setItem(i, { rirMax: Math.max(it.rirMin, num(v, 0)) })} /></div>
             </div>
           </div>
         );
       })}
       <button className="btn ghost block" onClick={() => setPicker(true)}><Icon name="plus" size={16} /> {t('wk.addex')}</button>
       <ExercisePicker open={picker} onClose={() => setPicker(false)} onPick={add} />
+      <PlanVolume routines={[...routines.filter((x) => x.id !== r.id), r]} />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { db, initDatabase, loadSettings } from '../src/db';
 import { commitHevy, previewHevy, buildBackup, restoreBackup, validateBackup, resetAll } from '../src/lib/actions';
 import {
   computeRecords, deloadSignal, detectPR, e1rm, exerciseSessions, stagnationSessions, suggestProgression,
-  weeklyVolume, weekStart, addWorkoutVolume, emptyVolume, DAY_MS, type Session
+  weeklyVolume, weekStart, addWorkoutVolume, emptyVolume, DAY_MS, setTarget, startingWeight, type Session
 } from '../src/lib/calc';
 import { decodeRoutine, encodeRoutine, shareLink } from '../src/lib/share';
 import type { Exercise, Workout } from '../src/types';
@@ -144,9 +144,43 @@ describe('dupla progressão e alertas', () => {
     const s = suggestProgression(ex, sess([[20, 12], [20, 12]]), { repMin: 8, repMax: 12, plannedSets: 3 })!;
     expect(s.kind).toBe('hold');
   });
-  it('não sobe se o RIR registado ficou abaixo do alvo (série demasiado dura)', () => {
-    const s = suggestProgression(ex, sess([[20, 12, 0], [20, 12, 0], [20, 12, 0]]), { repMin: 8, repMax: 12, plannedSets: 3, rirMin: 1 })!;
-    expect(s.kind).toBe('hold');
+  it('sobe 2 incrementos se todas as séries passaram o topo em 2 reps ou mais', () => {
+    const s = suggestProgression(ex, sess([[20, 14], [20, 14], [20, 15]]), { repMin: 8, repMax: 12, plannedSets: 3 })!;
+    expect(s).toMatchObject({ kind: 'increase', weight: 25, reps: 8, reason: 'top2' });
+    expect(suggestProgression(ex, sess([[20, 12], [20, 13], [20, 12]]), { repMin: 8, repMax: 12, plannedSets: 3 })).toMatchObject({ weight: 22.5, reason: 'top' });
+  });
+  it('sugere descer se ficou abaixo do mínimo de reps em 2 sessões seguidas com a mesma carga', () => {
+    const last = sess([[30, 7], [30, 6], [30, 6]], 2);
+    const prev = sess([[30, 7], [30, 7], [30, 6]], 1);
+    const s = suggestProgression(ex, last, { repMin: 8, repMax: 12, plannedSets: 3, prev })!;
+    expect(s).toMatchObject({ kind: 'decrease', weight: 27.5, reps: 10, reason: 'low' });
+    // só numa sessão: mantém
+    expect(suggestProgression(ex, last, { repMin: 8, repMax: 12, plannedSets: 3 })!.kind).toBe('hold');
+    // cargas diferentes nas 2 sessões: mantém
+    expect(suggestProgression(ex, last, { repMin: 8, repMax: 12, plannedSets: 3, prev: sess([[27.5, 7], [27.5, 6]], 1) })!.kind).toBe('hold');
+  });
+  it('meta série a série: manter = repete a série anterior e +1 rep se estava abaixo do topo', () => {
+    const last = sess([[20, 12], [20, 9], [20, 8]]);
+    const sg = suggestProgression(ex, last, { repMin: 8, repMax: 12, plannedSets: 3 })!;
+    expect(setTarget(sg, last, 0, 12)).toEqual({ weight: 20, reps: 12 });
+    expect(setTarget(sg, last, 1, 12)).toEqual({ weight: 20, reps: 10 });
+    expect(setTarget(sg, last, 2, 12)).toEqual({ weight: 20, reps: 9 });
+    expect(setTarget(sg, last, 5, 12)).toEqual({ weight: 20, reps: 9 }); // séries extra usam a última
+    const up = suggestProgression(ex, sess([[20, 12], [20, 12], [20, 12]]), { repMin: 8, repMax: 12, plannedSets: 3 })!;
+    expect(setTarget(up, last, 1, 12)).toEqual({ weight: 22.5, reps: 8 });
+    expect(setTarget(null, last, 0, 12)).toBeUndefined();
+  });
+  it('carga inicial estimada a partir de um exercício parecido (mesmo músculo e equipamento)', () => {
+    const ref: Exercise = { ...ex, id: 'ref', primary: 'chest', equipment: 'cable' };
+    const novo: Exercise = { ...ex, id: 'novo', primary: 'chest', equipment: 'cable', repMin: 8, repMax: 12, increment: 2.5 };
+    const outro: Exercise = { ...ex, id: 'outro', primary: 'chest', equipment: 'barbell' };
+    const m = new Map([ref, novo, outro].map((e) => [e.id, e]));
+    const w: Workout = { id: 1, name: 'x', startedAt: 1, endedAt: 2, exercises: [{ exerciseId: 'ref', sets: [{ weight: 40, reps: 10, done: true }] }] };
+    const st = startingWeight(novo, [w], m, 8, 12)!;
+    expect(st.from).toBe('ref');
+    // 1RM ≈ 53,3 kg; 12 reps (meio 10 + 2 de reserva) → ≈ 38 kg → arredonda a 2,5
+    expect(st.weight).toBe(37.5);
+    expect(startingWeight(outro, [w], m, 8, 12)).toBeUndefined(); // sem equipamento igual com histórico
   });
   it('e1RM (Epley)', () => {
     expect(e1rm(100, 1)).toBe(100);

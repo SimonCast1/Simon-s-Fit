@@ -13,6 +13,7 @@ import { WorkoutDetail } from './screens/WorkoutDetail';
 import { WorkoutScreen } from './screens/WorkoutScreen';
 import { Stats } from './screens/Stats';
 import { Summary } from './screens/Summary';
+import { WorkoutDone } from './screens/WorkoutDone';
 import { Settings } from './screens/Settings';
 import { ImportShared } from './screens/ImportShared';
 
@@ -46,6 +47,7 @@ function Screen() {
     case 'active': return active ? <WorkoutScreen key={active.id} id={active.id!} /> : <Redirect to="/" />;
     case 'stats': return <Stats />;
     case 'summary': return <Summary />;
+    case 'done': return <WorkoutDone key={b} id={num} />;
     case 'settings': return <Settings />;
     case 'import': return <ImportShared data={query.get('d') ?? ''} />;
     default: return <Redirect to="/" />;
@@ -57,7 +59,7 @@ export function App() {
   const { parts } = useRoute();
   const a = parts[0];
   const inWorkout = a === 'active' || a === 'edit';
-  const tabKey = a === undefined ? 'home' : a === 'routine' ? 'routines' : a === 'exercise' ? 'exercises' : a === 'workout' ? 'history' : a === 'summary' ? 'stats' : a;
+  const tabKey = a === undefined ? 'home' : a === 'routine' ? 'routines' : a === 'exercise' ? 'exercises' : a === 'workout' ? 'history' : a === 'summary' ? 'stats' : a === 'done' ? 'history' : a;
 
   useEffect(() => { window.scrollTo(0, 0); }, [a, parts[1]]);
 

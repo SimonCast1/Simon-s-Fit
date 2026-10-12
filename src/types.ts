@@ -77,6 +77,8 @@ export interface WorkoutExercise {
   rir?: string; // ex. "1-2"
   /** nº de séries previstas pela rotina */
   planned?: number;
+  /** exercício original, se este foi trocado durante o treino */
+  replacedFrom?: string;
 }
 
 export interface Workout {

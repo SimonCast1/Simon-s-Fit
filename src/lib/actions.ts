@@ -1,3 +1,4 @@
+import type { RoutineChange } from './routineDiff';
 import { db, setSetting, loadSettings, initDatabase } from '../db';
 import type { Exercise, Routine, SetEntry, Workout, WorkoutExercise } from '../types';
 import { buildImport, parseHevyCsv, type ImportOptions } from './hevy';
@@ -84,6 +85,38 @@ export async function discardWorkout(id: number) {
 }
 
 /* ---------- rotinas ---------- */
+
+/** Aplica à rotina as alterações escolhidas no fim do treino. */
+export async function applyRoutineChanges(routineId: number, changes: RoutineChange[]): Promise<void> {
+  const r = await db.routines.get(routineId);
+  if (!r || !changes.length) return;
+  const exs = new Map((await db.exercises.toArray()).map((e) => [e.id, e]));
+  for (const c of changes) {
+    if (c.kind === 'replace') {
+      const it = r.items.find((x) => x.exerciseId === c.fromId);
+      const ex = exs.get(c.toId);
+      if (it && ex) {
+        it.exerciseId = c.toId;
+        it.repMin = ex.repMin;
+        it.repMax = ex.repMax;
+      }
+    } else if (c.kind === 'sets') {
+      const it = r.items.find((x) => x.exerciseId === c.exerciseId);
+      if (it) it.sets = c.to;
+    } else if (c.kind === 'remove') {
+      r.items = r.items.filter((x) => x.exerciseId !== c.exerciseId);
+    } else {
+      const ex = exs.get(c.exerciseId);
+      if (ex) r.items.push({ exerciseId: c.exerciseId, sets: c.sets, repMin: ex.repMin, repMax: ex.repMax, rirMin: 1, rirMax: 2 });
+    }
+  }
+  // supersérie que ficou com um só exercício deixa de ser supersérie
+  const count = new Map<string, number>();
+  r.items.forEach((x) => x.supersetId && count.set(x.supersetId, (count.get(x.supersetId) ?? 0) + 1));
+  r.items.forEach((x) => { if (x.supersetId && (count.get(x.supersetId) ?? 0) < 2) delete x.supersetId; });
+  await db.routines.put(r);
+}
+
 
 export async function saveRoutine(r: Routine): Promise<number> {
   if (r.id === undefined) {
@@ -217,7 +250,7 @@ export async function markBackupDone() {
 /** Backup num toque: abre a folha de partilha do sistema (Guardar em Ficheiros/iCloud) ou descarrega o ficheiro. */
 export async function shareBackup(): Promise<'shared' | 'downloaded' | 'cancelled'> {
   const b = await buildBackup();
-  const name = `simons-fit-${new Date().toISOString().slice(0, 10)}.json`;
+  const name = 'simons-fit-backup.json'; // nome fixo: ao guardar na mesma pasta, o iOS oferece «Substituir»
   const file = new File([JSON.stringify(b)], name, { type: 'application/json' });
   try {
     if (navigator.canShare?.({ files: [file] })) {

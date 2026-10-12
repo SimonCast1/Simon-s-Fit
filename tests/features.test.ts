@@ -1,8 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { db, initDatabase } from '../src/db';
+import { applyRoutineChanges } from '../src/lib/actions';
+import { diffWorkoutRoutine } from '../src/lib/routineDiff';
 import { weekStreak, workoutsByDay, workoutPRs, DAY_MS, weekStart } from '../src/lib/calc';
-import { plannedPerWeek, weekSummary } from '../src/lib/summary';
+import { plannedPerWeek, weekSummary, workoutAnalysis } from '../src/lib/summary';
 import { buildCardModel, bestSetText } from '../src/lib/card';
-import type { Exercise, Workout } from '../src/types';
+import type { Exercise, Routine, Workout } from '../src/types';
 
 const bench: Exercise = {
   id: 'bench', name: 'Bench Press', kind: 'weight', primary: 'chest', secondary: ['triceps'],
@@ -126,5 +129,103 @@ describe('cartão de treino', () => {
     const run: Exercise = { ...bench, id: 'run', kind: 'cardio', primary: null, secondary: [] };
     expect(bestSetText(run, [{ durationSec: 1800, distanceKm: 5, done: true }], 'pt')).toBe('30 min · 5 km');
     expect(bestSetText(bench, [{ weight: 60, reps: 8, done: true }, { weight: 62.5, reps: 6, done: true }], 'pt')).toBe('60 kg × 8');
+  });
+});
+
+describe('alterações do treino face à rotina', () => {
+  const item = (exerciseId: string, sets: number) => ({ exerciseId, sets, repMin: 8, repMax: 12, rirMin: 1, rirMax: 2 });
+  const routine: Routine = { id: 1, name: 'R', order: 0, days: [1], items: [item('a', 3), item('b', 3), item('c', 3), item('d', 3)] };
+  const sets = (n: number) => Array.from({ length: n }, () => ({ weight: 10, reps: 10, done: true }));
+  const w = (exercises: Workout['exercises']): Workout => ({ id: 9, name: 'R', routineId: 1, startedAt: 1, exercises });
+
+  it('sem diferenças não devolve nada', () => {
+    const ws = w([{ exerciseId: 'a', sets: sets(3) }, { exerciseId: 'b', sets: sets(3) }, { exerciseId: 'c', sets: sets(3) }, { exerciseId: 'd', sets: sets(3) }]);
+    expect(diffWorkoutRoutine(ws, routine)).toEqual([]);
+  });
+
+  it('deteta substituição, série a mais, exercício novo e exercício não feito', () => {
+    const ws = w([
+      { exerciseId: 'a', sets: sets(4) },
+      { exerciseId: 'x', replacedFrom: 'b', sets: sets(3) },
+      { exerciseId: 'c', sets: [...sets(2), { done: false }] },
+      { exerciseId: 'n', sets: sets(2) }
+    ]);
+    expect(diffWorkoutRoutine(ws, routine)).toEqual([
+      { kind: 'sets', exerciseId: 'a', from: 3, to: 4 },
+      { kind: 'replace', fromId: 'b', toId: 'x' },
+      { kind: 'sets', exerciseId: 'c', from: 3, to: 2 },
+      { kind: 'add', exerciseId: 'n', sets: 2 },
+      { kind: 'remove', exerciseId: 'd' }
+    ]);
+  });
+
+  it('séries de aquecimento não contam', () => {
+    const ws = w([
+      { exerciseId: 'a', sets: [{ weight: 5, reps: 10, done: true, warmup: true }, ...sets(3)] },
+      { exerciseId: 'b', sets: sets(3) }, { exerciseId: 'c', sets: sets(3) }, { exerciseId: 'd', sets: sets(3) }
+    ]);
+    expect(diffWorkoutRoutine(ws, routine)).toEqual([]);
+  });
+});
+
+describe('guardar alterações na rotina', () => {
+  beforeAll(async () => { await initDatabase(); });
+
+  it('aplica substituição, séries, remoção e exercício novo; desfaz supersérie órfã', async () => {
+    const r = (await db.routines.toArray()).find((x) => x.name.startsWith('Full body'))!;
+    const before = r.items.length;
+    const first = r.items[0].exerciseId;
+    const ss = r.items.find((x) => x.supersetId)!;
+    const partner = r.items.find((x) => x.supersetId === ss.supersetId && x.exerciseId !== ss.exerciseId)!;
+    const ids = (await db.exercises.toArray()).map((e) => e.id);
+    const novo = ids.find((id) => !r.items.some((x) => x.exerciseId === id) && id !== first)!;
+    const novo2 = ids.find((id) => !r.items.some((x) => x.exerciseId === id) && id !== novo)!;
+    await applyRoutineChanges(r.id!, [
+      { kind: 'replace', fromId: first, toId: novo },
+      { kind: 'sets', exerciseId: novo, from: r.items[0].sets, to: 5 },
+      { kind: 'remove', exerciseId: partner.exerciseId },
+      { kind: 'add', exerciseId: novo2, sets: 2 }
+    ]);
+    const after = (await db.routines.get(r.id!))!;
+    expect(after.items.length).toBe(before); // -1 removido +1 adicionado
+    expect(after.items[0].exerciseId).toBe(novo);
+    expect(after.items[0].sets).toBe(5);
+    expect(after.items.at(-1)).toMatchObject({ exerciseId: novo2, sets: 2 });
+    expect(after.items.some((x) => x.exerciseId === partner.exerciseId)).toBe(false);
+    expect(after.items.find((x) => x.exerciseId === ss.exerciseId)!.supersetId).toBeUndefined();
+  });
+});
+
+describe('análise do treino', () => {
+  const settings = { minSets: { chest: 10, triceps: 8 } };
+
+  it('compara com o treino anterior da mesma rotina, deteta progresso, recorde e séries por fazer', () => {
+    const t0 = new Date(2026, 9, 1, 10).getTime();
+    const a = { ...wk(t0, 60, 8, 3), routineId: 5 };
+    const b = { ...wk(t0 + 7 * DAY_MS, 62.5, 8, 2), routineId: 5 };
+    b.exercises[0].planned = 3;
+    const r = workoutAnalysis(b, [a, b], exMap, settings);
+    expect(r.prev?.name).toBe('Superior A');
+    expect(r.results[0]).toMatchObject({ exerciseId: 'bench', status: 'up', pr: true });
+    expect(r.planned).toBe(3);
+    expect(r.done).toBe(2);
+    const gk = r.good.map((n) => n.key);
+    const ik = r.improve.map((n) => n.key);
+    expect(gk).toContain('wsum.good.prs');
+    expect(gk).toContain('wsum.good.up');
+    expect(ik).toContain('wsum.imp.skipped');
+    expect(ik).toContain('wsum.imp.muscle');
+  });
+
+  it('exercício pior que a última vez e primeira vez com a rotina', () => {
+    const t0 = new Date(2026, 9, 1, 10).getTime();
+    const a = { ...wk(t0, 60, 8, 3), routineId: 5 };
+    const b = { ...wk(t0 + 7 * DAY_MS, 50, 8, 3), routineId: 5 };
+    expect(workoutAnalysis(b, [a, b], exMap, settings).results[0].status).toBe('down');
+    expect(workoutAnalysis(b, [a, b], exMap, settings).improve.map((n) => n.key)).toContain('wsum.imp.down1');
+    const first = workoutAnalysis(a, [a], exMap, settings);
+    expect(first.prev).toBeUndefined();
+    expect(first.good.map((n) => n.key)).toContain('wsum.good.first');
+    expect(first.results[0].status).toBe('new');
   });
 });

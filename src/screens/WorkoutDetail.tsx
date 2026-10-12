@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '../store';
 import { back, go } from '../router';
-import { ConfirmSheet, Header, Icon, Menu, Sheet, useToast } from '../components/ui';
-import { buildCardModel, renderCard } from '../lib/card';
+import { ConfirmSheet, Header, Icon, Menu, useToast } from '../components/ui';
+import { WorkoutCardSheet } from '../components/WorkoutCardSheet';
 import { computeRecords, detectPR, exerciseSessions, fmtDuration, fmtNum, isWorking, setScore, workoutDurationSec, workoutTotals } from '../lib/calc';
 import { discardWorkout, startFromPast } from '../lib/actions';
 import type { Exercise, SetEntry } from '../types';
@@ -12,8 +12,6 @@ export function WorkoutDetail({ id }: { id: number }) {
   const toast = useToast();
   const [del, setDel] = useState(false);
   const [cardOpen, setCardOpen] = useState(false);
-  const [cardBlob, setCardBlob] = useState<Blob | null>(null);
-  const [cardUrl, setCardUrl] = useState('');
   const w = finished.find((x) => x.id === id);
   const loc = lang === 'pt' ? 'pt-PT' : 'en-GB';
 
@@ -35,30 +33,6 @@ export function WorkoutDetail({ id }: { id: number }) {
     return out;
   }, [w, finished, exMap]);
 
-  useEffect(() => {
-    if (!cardOpen || !w) return;
-    let url = '';
-    let dead = false;
-    const model = buildCardModel(w, finished, exMap, lang, exName, {
-      duration: t('duration'), sets: t('sets'), volume: t('volume'), setsLc: t('sets.lc'), prs: t('summary.prs')
-    });
-    renderCard(model, t('card.more'), t('card.pr'))
-      .then((b) => {
-        if (dead) return;
-        url = URL.createObjectURL(b);
-        setCardBlob(b);
-        setCardUrl(url);
-      })
-      .catch(() => { if (!dead) { toast(t('card.failed')); setCardOpen(false); } });
-    return () => {
-      dead = true;
-      if (url) URL.revokeObjectURL(url);
-      setCardBlob(null);
-      setCardUrl('');
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cardOpen, w, lang]);
-
   if (!w) return <div className="screen"><Header title="?" onBack backTo="/history" /></div>;
   const tot = workoutTotals(w, exMap);
 
@@ -67,7 +41,7 @@ export function WorkoutDetail({ id }: { id: number }) {
     if (ex.kind === 'time') return `${s.durationSec ?? 0}s`;
     if (ex.kind === 'cardio') return `${fmtNum((s.durationSec ?? 0) / 60, lang)}′${s.distanceKm ? ` · ${fmtNum(s.distanceKm, lang, 2)} km` : ''}`;
     const base = ex.kind === 'bodyweight' && !s.weight ? `${s.reps ?? 0} reps` : `${fmtNum(s.weight ?? 0, lang)} kg × ${s.reps ?? 0}`;
-    return `${base}${s.rir !== undefined ? ` · RIR ${s.rir}` : ''}`;
+    return base;
   };
 
   const shareText = () => {
@@ -85,21 +59,6 @@ export function WorkoutDetail({ id }: { id: number }) {
     try {
       if (navigator.share) await navigator.share({ title: w.name, text });
       else { await navigator.clipboard.writeText(text); toast(t('copied')); }
-    } catch { /* cancelado */ }
-  };
-
-  const shareCard = async () => {
-    if (!cardBlob) return;
-    const name = `simons-fit-${new Date(w.startedAt).toISOString().slice(0, 10)}.png`;
-    const file = new File([cardBlob], name, { type: 'image/png' });
-    try {
-      if (navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: w.name });
-      else {
-        const a = document.createElement('a');
-        a.href = cardUrl;
-        a.download = name;
-        a.click();
-      }
     } catch { /* cancelado */ }
   };
 
@@ -150,12 +109,7 @@ export function WorkoutDetail({ id }: { id: number }) {
           </section>
         );
       })}
-      <Sheet open={cardOpen} onClose={() => setCardOpen(false)} title={t('card.title')}>
-        {cardUrl ? <img className="card-preview" src={cardUrl} alt={w.name} /> : <div className="muted center" style={{ padding: 40 }}>…</div>}
-        <button className="btn accent block" disabled={!cardBlob} onClick={shareCard}>
-          <Icon name="share" size={16} /> {typeof navigator.canShare === 'function' ? t('card.share') : t('card.save')}
-        </button>
-      </Sheet>
+      <WorkoutCardSheet workout={w} open={cardOpen} onClose={() => setCardOpen(false)} />
       <ConfirmSheet
         open={del}
         title={t('detail.delete.title')}

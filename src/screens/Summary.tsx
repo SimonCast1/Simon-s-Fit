@@ -3,7 +3,8 @@ import { useApp } from '../store';
 import { MUSCLES } from '../types';
 import { Header, Icon, SectionTitle } from '../components/ui';
 import { addWeeks, fmtDuration, fmtNum, weekStart } from '../lib/calc';
-import { weekSummary, type Note } from '../lib/summary';
+import { weekSummary } from '../lib/summary';
+import { GoodImprove } from '../components/notes';
 
 function pctDelta(cur: number, prev: number): number | null {
   if (prev <= 0) return null;
@@ -11,21 +12,12 @@ function pctDelta(cur: number, prev: number): number | null {
 }
 
 export function Summary() {
-  const { t, lang, settings, finished, routines, exMap, exName } = useApp();
+  const { t, lang, settings, finished, routines, exMap } = useApp();
   const [off, setOff] = useState(0);
   const loc = lang === 'pt' ? 'pt-PT' : 'en-GB';
   const from = addWeeks(weekStart(Date.now()), -off);
   const s = useMemo(() => weekSummary(finished, exMap, routines, settings, from), [finished, exMap, routines, settings, from]);
   const end = addWeeks(from, 1) - 1;
-
-  const text = (n: Note): string =>
-    t(n.key, {
-      n: n.n ?? '',
-      m: n.m ?? '',
-      pct: n.pct ?? '',
-      muscles: (n.muscles ?? []).map((m) => t(`m.${m}`)).join(', '),
-      exercise: n.exerciseId ? exName(exMap.get(n.exerciseId)) : ''
-    });
 
   const delta = (cur: number, prev: number) => {
     const d = s.inProgress ? null : pctDelta(cur, prev);
@@ -67,17 +59,7 @@ export function Summary() {
       </div>
       {s.workouts > 0 && <div className="muted small">{t('duration')}: {fmtDuration(s.durationSec)}{s.prs.length > 0 ? ` · ${t('summary.prs')}: ${s.prs.length}` : ''}</div>}
 
-      <SectionTitle>{t('summary.good')}</SectionTitle>
-      <div className="note-list">
-        {s.good.length === 0 && <div className="muted small">–</div>}
-        {s.good.map((n, i) => <div key={i} className="note good"><Icon name="check" size={16} /><div>{text(n)}</div></div>)}
-      </div>
-
-      <SectionTitle>{t('summary.improve')}</SectionTitle>
-      <div className="note-list">
-        {s.improve.length === 0 && <div className="muted small">–</div>}
-        {s.improve.map((n, i) => <div key={i} className="note improve"><Icon name="warn" size={16} /><div>{text(n)}</div></div>)}
-      </div>
+      <GoodImprove good={s.good} improve={s.improve} />
 
       {s.workouts > 0 && (
         <>

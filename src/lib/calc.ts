@@ -212,40 +212,137 @@ export function detectPR(ex: Exercise | undefined, prior: Records, set: SetEntry
 
 /* ---------- dupla progressão ---------- */
 
+export type SuggestionReason = 'top' | 'top2' | 'reps' | 'low';
+
 export interface Suggestion {
-  kind: 'increase' | 'hold';
+  kind: 'increase' | 'hold' | 'decrease';
+  /** carga alvo da série mais pesada */
   weight: number;
+  /** reps alvo dessa série */
   reps: number;
   /** na dupla progressão com peso corporal, indica carga extra a adicionar */
   extra?: boolean;
+  /** porquê: bateu o topo (top), bateu o topo com reps de sobra (top2), falta chegar ao topo (reps), abaixo do mínimo em 2 sessões (low) */
+  reason: SuggestionReason;
+  /** carga da última sessão (para explicar a meta) */
+  from: number;
+  /** reps mínimas do intervalo (para a razão "low") */
+  min: number;
 }
 
+function topStats(sets: SetEntry[]) {
+  const top = Math.max(...sets.map((s) => s.weight ?? 0));
+  const atTop = sets.filter((s) => (s.weight ?? 0) === top);
+  return { top, minReps: Math.min(...atTop.map((s) => s.reps ?? 0)) };
+}
+
+/**
+ * Dupla progressão sem RIR:
+ *  - subir: todas as séries no topo das reps (e pelo menos as séries previstas). Se todas passaram
+ *    o topo em 2 reps ou mais, sobe 2 incrementos;
+ *  - descer: nas 2 últimas sessões, com a mesma carga, a série mais fraca ficou abaixo do mínimo;
+ *  - manter: carga igual e +1 rep na série mais fraca.
+ */
 export function suggestProgression(
   ex: Exercise,
   last: Session | undefined,
-  opts: { repMin: number; repMax: number; plannedSets?: number; rirMin?: number }
+  opts: { repMin: number; repMax: number; plannedSets?: number; prev?: Session }
 ): Suggestion | null {
   if (!last || (ex.kind !== 'weight' && ex.kind !== 'bodyweight')) return null;
   const sets = last.sets.filter((s) => (s.reps ?? 0) > 0);
   if (!sets.length) return null;
-  const topWeight = Math.max(...sets.map((s) => s.weight ?? 0));
+  const { top: topWeight, minReps } = topStats(sets);
   const planned = opts.plannedSets ?? sets.length;
   const allAtTop = sets.every((s) => (s.reps ?? 0) >= opts.repMax);
-  const tooHard =
-    opts.rirMin !== undefined && sets.some((s) => s.rir !== undefined && s.rir < (opts.rirMin ?? 0));
   const inc = ex.increment || 2.5;
+  const base = { from: topWeight, min: opts.repMin };
 
-  if (allAtTop && sets.length >= planned && !tooHard) {
+  if (allAtTop && sets.length >= planned) {
+    const surplus = ex.kind === 'weight' && sets.every((s) => (s.reps ?? 0) >= opts.repMax + 2);
+    const steps = surplus ? 2 : 1;
     return {
       kind: 'increase',
-      weight: Number((topWeight + inc).toFixed(2)),
+      weight: Number((topWeight + inc * steps).toFixed(2)),
       reps: opts.repMin,
-      extra: ex.kind === 'bodyweight'
+      extra: ex.kind === 'bodyweight',
+      reason: surplus ? 'top2' : 'top',
+      ...base
     };
   }
-  const atTop = sets.filter((s) => (s.weight ?? 0) === topWeight);
-  const minReps = Math.min(...atTop.map((s) => s.reps ?? 0));
-  return { kind: 'hold', weight: topWeight, reps: Math.min(opts.repMax, minReps + 1) };
+
+  if (ex.kind === 'weight' && topWeight > 0 && opts.prev) {
+    const prevSets = opts.prev.sets.filter((s) => (s.reps ?? 0) > 0);
+    if (prevSets.length) {
+      const p = topStats(prevSets);
+      if (p.top === topWeight && minReps < opts.repMin && p.minReps < opts.repMin && topWeight - inc > 0) {
+        return {
+          kind: 'decrease',
+          weight: Number((topWeight - inc).toFixed(2)),
+          reps: Math.round((opts.repMin + opts.repMax) / 2),
+          reason: 'low',
+          ...base
+        };
+      }
+    }
+  }
+
+  return { kind: 'hold', weight: topWeight, reps: Math.min(opts.repMax, minReps + 1), reason: 'reps', ...base };
+}
+
+export interface SetTarget {
+  weight: number;
+  reps: number;
+}
+
+/**
+ * Meta de cada série de trabalho (índice 0 = primeira série sem aquecimento).
+ * Subir/descer: todas as séries com a nova carga. Manter: cada série repete a da última vez
+ * (+1 rep se estava abaixo do topo e com a carga mais alta).
+ */
+export function setTarget(
+  sugg: Suggestion | null,
+  last: Session | undefined,
+  workingIndex: number,
+  repMax: number
+): SetTarget | undefined {
+  if (!sugg || !last) return undefined;
+  if (sugg.kind !== 'hold') return { weight: sugg.weight, reps: sugg.reps };
+  const sets = last.sets.filter((s) => (s.reps ?? 0) > 0);
+  if (!sets.length) return undefined;
+  const ls = sets[Math.min(workingIndex, sets.length - 1)];
+  const w = ls.weight ?? 0;
+  const r = ls.reps ?? 0;
+  const isTop = w === sugg.from;
+  return { weight: w, reps: isTop && r < repMax ? r + 1 : r };
+}
+
+/**
+ * Carga inicial estimada para um exercício sem histórico, a partir do 1RM estimado de exercícios
+ * parecidos (mesmo músculo principal e mesmo equipamento) que já foram feitos. Devolve undefined
+ * se não houver referência.
+ */
+export function startingWeight(
+  ex: Exercise,
+  workouts: Workout[],
+  exMap: Map<string, Exercise>,
+  repMin: number,
+  repMax: number
+): { weight: number; from: string } | undefined {
+  if (ex.kind !== 'weight' || !ex.primary) return undefined;
+  let best: { e: number; id: string } | undefined;
+  for (const o of exMap.values()) {
+    if (o.id === ex.id || o.kind !== 'weight' || o.primary !== ex.primary || o.equipment !== ex.equipment) continue;
+    const sessions = exerciseSessions(workouts, o, o.id);
+    const rec = computeRecords(sessions);
+    if (rec.bestE1rm && (!best || rec.bestE1rm.value > best.e)) best = { e: rec.bestE1rm.value, id: o.id };
+  }
+  if (!best) return undefined;
+  // deixa ~2 reps de reserva no meio do intervalo
+  const reps = (repMin + repMax) / 2 + 2;
+  const raw = best.e / (1 + reps / 30);
+  const inc = ex.increment || 2.5;
+  const w = Math.max(inc, Math.round(raw / inc) * inc);
+  return { weight: Number(w.toFixed(2)), from: best.id };
 }
 
 /* ---------- estagnação e deload ---------- */
@@ -399,4 +496,20 @@ export function weekStreak(workouts: Workout[], minPerWeek: number, now = Date.n
     else break;
   }
   return streak;
+}
+
+/* ---------- volume semanal do plano (rotinas) ---------- */
+
+/** Séries por semana e por músculo que as rotinas dão (indiretas ×0,5). */
+export function planVolume(routines: { items: { exerciseId: string; sets: number }[] }[], exMap: Map<string, Exercise>): VolumeMap {
+  const vol = emptyVolume();
+  for (const r of routines) {
+    for (const it of r.items) {
+      const ex = exMap.get(it.exerciseId);
+      if (!ex) continue;
+      if (ex.primary) vol[ex.primary] += it.sets;
+      for (const m of ex.secondary) vol[m] += it.sets * 0.5;
+    }
+  }
+  return vol;
 }
