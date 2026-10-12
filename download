@@ -1,0 +1,5 @@
+node_modules
+dist
+tests/fixture-hevy.csv
+*.log
+.DS_Store

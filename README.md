@@ -5,14 +5,14 @@ Tracker de treinos pessoal, feito à medida do plano dos documentos de referênc
 ## O que faz
 
 **Treino**
-- Em cada série mostra sempre o que fizeste **da última vez** no mesmo exercício (carga × reps). Tocar no valor copia-o.
+- Em cada série mostra sempre o que fizeste **da última vez** no mesmo exercício (carga × reps) e a **meta** dessa série. Tocar num dos valores copia-o. Colunas: `#`, Anterior, Meta, kg, reps, Feito (sem RIR).
 - Concluir uma série sem escrever nada usa os valores previstos (a meta ou o anterior): um toque por série.
 - Cronómetro de descanso por exercício (compostos 150 s, isolamento 90 s, editável), com som (a vibração não existe no Safari do iPhone).
-- Séries de aquecimento, RIR por série, notas, supersérie, substituir/reordenar exercícios, treino vazio.
+- Séries de aquecimento, notas, supersérie, substituir/reordenar exercícios, treino vazio.
 - O treino em curso sobrevive a fechar a app ou a bloquear o telemóvel.
 
 **Alertas discretos durante o treino** (regras dos documentos)
-- **Dupla progressão:** quando todas as séries chegam ao topo da faixa de reps (com o RIR alvo), sugere subir a carga pelo incremento do exercício; caso contrário mostra a meta para bater a série mais fraca.
+- **Metas (dupla progressão, sem RIR):** meta série a série; sobe a carga quando todas as séries chegam ao topo da faixa (sobe 2 incrementos se passaste o topo em 2 reps ou mais); **baixa a carga** se ficaste abaixo do mínimo de reps em 2 sessões seguidas com a mesma carga; senão mantém e pede +1 rep na série mais fraca. Cada meta traz a explicação. Em exercícios sem histórico dá uma **carga inicial estimada** a partir de um exercício parecido (mesmo músculo e equipamento).
 - **Volume semanal por músculo** (contagem fracionada: indiretas = 0,5) junto de cada exercício, ex. `Peito 7/10`.
 - **Estagnação:** 4 sessões (≥3 semanas) sem bater o teu melhor → sugere +2 séries.
 - **Deload:** força a descer em ≥3 exercícios (≥40 %) durante 2 semanas seguidas.
@@ -24,6 +24,9 @@ Tracker de treinos pessoal, feito à medida do plano dos documentos de referênc
 - Histórico em lista ou **calendário** (dias treinados, sequência de semanas a cumprir a meta), detalhe, repetir/editar treino, partilhar como texto.
 - **Cartão do treino:** imagem (PNG) com duração, séries, volume, melhor série de cada exercício e PRs, para partilhar (menu ⋯ no detalhe do treino).
 - Estatísticas: volume semanal por músculo vs. mínimo, evolução de força por exercício, treinos por semana.
+- **Resumo no fim do treino:** compara com a última vez da mesma rotina (séries, volume), mostra quais exercícios subiram/desceram, PRs, e notas do que correu bem e do que melhorar.
+- **Alterações à rotina:** ao terminar, se trocaste, adicionaste ou retiraste exercícios ou mudaste o nº de séries, escolhes por alteração entre *Só neste treino* (por defeito) e *Guardar na rotina*.
+- **Séries por semana do plano** nas Rotinas e no editor, contra os teus mínimos por músculo.
 - **Resumo semanal:** treinos, séries e volume contra a semana anterior, com notas do que está bem e do que melhorar (consistência, mínimos por músculo, estagnação, deload, backup).
 - **Importar do Hevy** (CSV) sem duplicar se importares duas vezes; deteta aquecimentos (opcional).
 - **Partilha de rotinas** por link ou QR code.
@@ -86,4 +89,4 @@ src/
 
 - **Incrementos, faixas de reps e descanso:** em *Exercícios → (exercício) → Editar*.
 - **Mínimos semanais por músculo** (avisos e estatísticas): em *Definições*.
-- **Rotinas:** em *Rotinas* (editar séries, reps, RIR, dias, supersérie).
+- **Rotinas:** em *Rotinas* (editar séries, reps, dias, supersérie).
