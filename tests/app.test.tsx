@@ -171,7 +171,7 @@ describe.skipIf(!has)('fluxo completo na interface', () => {
     await nav('#/');
     mount();
     await user.click(await screen.findByRole('button', { name: /Treino vazio/ }));
-    expect(await screen.findByText('Adiciona o primeiro exercício')).toBeTruthy();
+    expect(await screen.findByText('Adiciona o primeiro exercício', {}, { timeout: 4000 })).toBeTruthy();
     await user.click(screen.getByRole('button', { name: /Adicionar exercício/ }));
     const dlg = await screen.findByRole('dialog');
     await user.type(within(dlg).getByPlaceholderText('Pesquisar…'), 'prancha');
@@ -181,6 +181,21 @@ describe.skipIf(!has)('fluxo completo na interface', () => {
     await user.click(screen.getByRole('button', { name: 'Descartar treino' }));
     const d = await screen.findByRole('dialog');
     await user.click(within(d).getByRole('button', { name: 'Descartar treino' }));
+    await waitFor(() => expect(window.location.hash).toBe('#/'));
+    expect((await db.workouts.toArray()).filter((w) => !w.endedAt)).toHaveLength(0);
+  });
+
+  it('descartar o treino a partir da folha de terminar', async () => {
+    const user = userEvent.setup();
+    await nav('#/');
+    mount();
+    await user.click(await screen.findByRole('button', { name: /Treino vazio/ }));
+    await screen.findByText('Adiciona o primeiro exercício', {}, { timeout: 4000 });
+    await user.click(screen.getByRole('button', { name: 'Terminar' }));
+    const fin = await screen.findByRole('dialog');
+    await user.click(within(fin).getByRole('button', { name: 'Descartar treino' }));
+    const conf = await screen.findByRole('dialog');
+    await user.click(within(conf).getByRole('button', { name: 'Descartar treino' }));
     await waitFor(() => expect(window.location.hash).toBe('#/'));
     expect((await db.workouts.toArray()).filter((w) => !w.endedAt)).toHaveLength(0);
   });

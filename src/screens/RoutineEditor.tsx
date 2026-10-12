@@ -16,6 +16,7 @@ export function RoutineEditor({ id }: { id: number | 'new' }) {
   const toast = useToast();
   const [r, setR] = useState<Routine | null>(null);
   const [picker, setPicker] = useState(false);
+  const [swapIdx, setSwapIdx] = useState<number | null>(null);
 
   useEffect(() => {
     if (id === 'new') setR({ name: '', order: 0, days: [], items: [] });
@@ -45,6 +46,15 @@ export function RoutineEditor({ id }: { id: number | 'new' }) {
       }
     });
     setPicker(false);
+  };
+
+  const swap = (ids: string[]) => {
+    const i = swapIdx;
+    setSwapIdx(null);
+    if (i === null || !ids[0]) return;
+    const ex = exMap.get(ids[0]);
+    // mantém o lugar, séries e supersérie; só atualiza o exercício e a gama de repetições
+    upd((x) => { x.items[i].exerciseId = ids[0]; if (ex) { x.items[i].repMin = ex.repMin; x.items[i].repMax = ex.repMax; } });
   };
 
   const toggleSS = (i: number) =>
@@ -93,6 +103,7 @@ export function RoutineEditor({ id }: { id: number | 'new' }) {
                 {i > 0 && <button className="icon-btn sm" onClick={() => upd((x) => { [x.items[i - 1], x.items[i]] = [x.items[i], x.items[i - 1]]; })} aria-label="up"><Icon name="up" size={16} /></button>}
                 {i < r.items.length - 1 && <button className="icon-btn sm" onClick={() => upd((x) => { [x.items[i + 1], x.items[i]] = [x.items[i], x.items[i + 1]]; })} aria-label="down"><Icon name="down" size={16} /></button>}
                 {(next || linked) && <button className={`icon-btn sm ${linked ? 'accent-i' : ''}`} onClick={() => toggleSS(i)} aria-label="superset"><Icon name="link" size={16} /></button>}
+                <button className="icon-btn sm" onClick={() => setSwapIdx(i)} aria-label={t('wk.replace')}><Icon name="repeat" size={16} /></button>
                 <button className="icon-btn sm" onClick={() => upd((x) => { x.items.splice(i, 1); })} aria-label="remove"><Icon name="trash" size={16} /></button>
               </div>
             </div>
@@ -106,6 +117,7 @@ export function RoutineEditor({ id }: { id: number | 'new' }) {
       })}
       <button className="btn ghost block" onClick={() => setPicker(true)}><Icon name="plus" size={16} /> {t('wk.addex')}</button>
       <ExercisePicker open={picker} onClose={() => setPicker(false)} onPick={add} />
+      <ExercisePicker open={swapIdx !== null} onClose={() => setSwapIdx(null)} onPick={swap} replaceId={swapIdx !== null ? r.items[swapIdx]?.exerciseId : undefined} />
       <PlanVolume routines={[...routines.filter((x) => x.id !== r.id), r]} />
     </div>
   );

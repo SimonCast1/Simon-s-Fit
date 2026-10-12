@@ -513,3 +513,12 @@ export function planVolume(routines: { items: { exerciseId: string; sets: number
   }
   return vol;
 }
+
+
+/** Quão parecido é `b` de `a` (para sugerir substitutos): 3 = mesmo músculo e equipamento, 2 = mesmo músculo, 1 = músculo em comum, 0 = nada. */
+export function relatedScore(a: Exercise, b: Exercise): number {
+  if (a.id === b.id || !a.primary) return 0;
+  if (b.primary === a.primary) return b.equipment === a.equipment ? 3 : 2;
+  if (b.secondary.includes(a.primary) || (b.primary && a.secondary.includes(b.primary))) return 1;
+  return 0;
+}

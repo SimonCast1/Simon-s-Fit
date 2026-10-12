@@ -556,7 +556,7 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
       )}
 
       <ExercisePicker open={pickerOpen} onClose={() => setPickerOpen(false)} onPick={addExercises} />
-      <ExercisePicker open={replaceIdx !== null} onClose={() => setReplaceIdx(null)} onPick={replaceExercise} />
+      <ExercisePicker open={replaceIdx !== null} onClose={() => setReplaceIdx(null)} onPick={replaceExercise} replaceId={replaceIdx !== null ? w.exercises[replaceIdx]?.exerciseId : undefined} />
 
       <Sheet open={finishOpen} onClose={() => setFinishOpen(false)} title={editing ? t('wk.save.title') : t('wk.finish.title')}>
         <p className="muted" style={{ marginTop: 0 }}>
@@ -586,6 +586,9 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
           <button className="btn ghost grow" onClick={() => setFinishOpen(false)}>{t('wk.continue')}</button>
           <button className="btn accent grow" onClick={finish}>{editing ? t('save') : t('finish')}</button>
         </div>
+        {!editing && (
+          <button className="btn danger-ghost block" style={{ marginTop: 10 }} onClick={() => { setFinishOpen(false); setDiscardOpen(true); }}>{t('wk.discard')}</button>
+        )}
       </Sheet>
 
       <ConfirmSheet

@@ -25,6 +25,7 @@ const pt: Dict = {
   'backup.remind.title': 'Faz um backup', 'backup.remind.text': 'Os dados vivem só neste telemóvel. Toca aqui e guarda uma cópia.', 'backup.quick': 'Guardar backup',
   // treino
   'wk.untitled': 'Treino', 'wk.empty': 'Adiciona o primeiro exercício', 'wk.addex': 'Adicionar exercício',
+  'picker.similar': 'Parecidos com {name}', 'picker.others': 'Todos os exercícios', 'picker.swap': 'Trocar',
   'wk.addset': 'Adicionar série', 'wk.replace': 'Substituir exercício', 'wk.link': 'Ligar à seguinte (supersérie)',
   'wk.unlink': 'Desligar supersérie', 'wk.note': 'Nota', 'wk.moveup': 'Subir', 'wk.movedown': 'Descer',
   'wk.remove': 'Remover exercício', 'wk.rename': 'Nome do treino', 'wk.needreps': 'Indica as repetições',
@@ -167,6 +168,7 @@ const en: Dict = {
   'home.import.title': 'Bring your Hevy history', 'home.import.text': 'Settings → Import from Hevy (CSV).',
   'backup.remind.title': 'Time for a backup', 'backup.remind.text': 'Your data lives only on this phone. Tap here to save a copy.', 'backup.quick': 'Save backup',
   'wk.untitled': 'Workout', 'wk.empty': 'Add your first exercise', 'wk.addex': 'Add exercise',
+  'picker.similar': 'Similar to {name}', 'picker.others': 'All exercises', 'picker.swap': 'Swap',
   'wk.addset': 'Add set', 'wk.replace': 'Replace exercise', 'wk.link': 'Link to next (superset)',
   'wk.unlink': 'Unlink superset', 'wk.note': 'Note', 'wk.moveup': 'Move up', 'wk.movedown': 'Move down',
   'wk.remove': 'Remove exercise', 'wk.rename': 'Workout name', 'wk.needreps': 'Enter the reps',

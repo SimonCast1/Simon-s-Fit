@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { back } from '../router';
 import { useApp } from '../store';
 
@@ -77,14 +78,16 @@ export function Sheet({ open, onClose, title, children, tall }: {
     };
   }, [open]);
   if (!open) return null;
-  return (
+  // Portal para o body: dentro do cabeçalho (sticky, z-index 20) a folha ficava presa atrás da barra de separadores.
+  return createPortal(
     <div className="sheet-wrap" onClick={onClose}>
       <div className={`sheet ${tall ? 'tall' : ''}`} onClick={(e) => e.stopPropagation()} role="dialog">
         <div className="sheet-grab" />
         {title && <div className="sheet-title">{title}</div>}
         <div className="sheet-body">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

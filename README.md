@@ -30,6 +30,8 @@ Tracker de treinos pessoal, feito à medida do plano dos documentos de referênc
 - **Resumo semanal:** treinos, séries e volume contra a semana anterior, com notas do que está bem e do que melhorar (consistência, mínimos por músculo, estagnação, deload, backup).
 - **Importar do Hevy** (CSV) sem duplicar se importares duas vezes; deteta aquecimentos (opcional).
 - **Partilha de rotinas** por link ou QR code.
+- **Trocar exercício** na edição de rotina e a meio do treino; a lista mostra primeiro os exercícios parecidos (mesmo músculo e equipamento).
+- **Descartar treino** também na folha de Terminar.
 - **Backup num toque** (ícone ⬇ no Início): abre a folha de partilha do iOS para guardar em Ficheiros/iCloud. Restauro a partir do JSON.
 - Português (PT) e inglês.
 

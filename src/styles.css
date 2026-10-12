@@ -249,6 +249,7 @@ textarea.inp { resize: none; }
 .picker-list { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -18px; padding: 0 18px; }
 .pick-row { display: flex; align-items: center; gap: 10px; width: 100%; padding: 13px 4px; border-bottom: 1px solid var(--line); }
 .pick-row .pick-name { flex: 1; }
+.pick-sec { font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); padding: 12px 4px 4px; }
 .pick-row.on { color: var(--accent); }
 .picker-foot { display: flex; gap: 10px; padding-top: 12px; }
 

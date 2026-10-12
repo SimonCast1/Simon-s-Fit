@@ -4,7 +4,8 @@ import { db, initDatabase, loadSettings } from '../src/db';
 import { commitHevy, previewHevy, buildBackup, restoreBackup, validateBackup, resetAll } from '../src/lib/actions';
 import {
   computeRecords, deloadSignal, detectPR, e1rm, exerciseSessions, stagnationSessions, suggestProgression,
-  weeklyVolume, weekStart, addWorkoutVolume, emptyVolume, DAY_MS, setTarget, startingWeight, type Session
+  weeklyVolume, weekStart, addWorkoutVolume, emptyVolume, DAY_MS, setTarget, startingWeight, type Session,
+  relatedScore,
 } from '../src/lib/calc';
 import { decodeRoutine, encodeRoutine, shareLink } from '../src/lib/share';
 import type { Exercise, Workout } from '../src/types';
@@ -214,5 +215,18 @@ describe('dupla progressão e alertas', () => {
     const stable = [wk(2, 100), wk(1, 100), wk(0, 102.5)];
     expect(deloadSignal(stable, m, now)).toBeNull();
     expect(deloadSignal([wk(1, 100), wk(0, 90)], m, now)).toBeNull(); // só uma descida
+  });
+});
+
+describe('substitutos parecidos', () => {
+  const mk = (id: string, primary: Exercise['primary'], equipment: string, secondary: Exercise['secondary'] = []): Exercise =>
+    ({ id, name: id, kind: 'weight', primary, secondary, equipment, increment: 2.5, repMin: 6, repMax: 10, restSeconds: 90, isCustom: false }) as Exercise;
+  it('ordena por músculo e equipamento', () => {
+    const base = mk('a', 'chest', 'barbell', ['triceps']);
+    expect(relatedScore(base, mk('b', 'chest', 'barbell'))).toBe(3);
+    expect(relatedScore(base, mk('c', 'chest', 'dumbbell'))).toBe(2);
+    expect(relatedScore(base, mk('d', 'shoulders', 'cable', ['chest']))).toBe(1);
+    expect(relatedScore(base, mk('e', 'quads', 'barbell'))).toBe(0);
+    expect(relatedScore(base, base)).toBe(0);
   });
 });
