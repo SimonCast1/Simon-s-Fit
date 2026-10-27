@@ -20,6 +20,7 @@ export function WorkoutDone({ id }: { id: number }) {
 
   const delta = (pct: number | null) =>
     pct === null || pct === 0 ? null : <div className={`delta ${pct > 0 ? 'up' : 'down'}`}>{pct > 0 ? '+' : ''}{pct} %</div>;
+  const prs = a.results.filter((r) => r.pr).length;
   const status = (r: (typeof a.results)[number]) => {
     if (r.status === 'up') return <span className="chip-s up"><Icon name="up" size={12} /> {r.pct !== undefined ? `+${fmtNum(r.pct, lang)} %` : ''}</span>;
     if (r.status === 'down') return <span className="chip-s down"><Icon name="down" size={12} /> {r.pct !== undefined ? `${fmtNum(r.pct, lang)} %` : ''}</span>;
@@ -29,8 +30,17 @@ export function WorkoutDone({ id }: { id: number }) {
   };
 
   return (
-    <div className="screen">
+    <div className="screen stagger">
       <Header title={t('done.title')} sub={w.name} onBack backTo="/" />
+      {prs > 0 && (
+        <div className="done-hero">
+          <div className="done-ico"><Icon name="trophy" size={26} /></div>
+          <div>
+            <div className="done-n">{prs} PR</div>
+            <div className="muted small">{t('records')}</div>
+          </div>
+        </div>
+      )}
       <div className="stats-grid">
         <div className="stat"><div className="stat-v">{fmtDuration(a.durationSec)}</div><div className="stat-l">{t('duration')}</div></div>
         <div className="stat"><div className="stat-v">{a.sets}</div><div className="stat-l">{t('sets')}</div>{delta(a.setsPct)}</div>

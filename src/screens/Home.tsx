@@ -30,6 +30,7 @@ export function Home() {
     for (const w of thisWeek) s.add(Math.floor((new Date(w.startedAt).setHours(0, 0, 0, 0) - wk) / DAY_MS + 0.5));
     return s;
   }, [thisWeek, wk]);
+  const planned = routines.reduce((n, r) => n + r.days.length, 0);
   const todayIdx = (new Date().getDay() + 6) % 7;
   const dayLetters = lang === 'pt' ? ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
@@ -50,7 +51,7 @@ export function Home() {
   const lastTot = last ? workoutTotals(last, exMap) : null;
 
   return (
-    <div className="screen">
+    <div className="screen stagger">
       <header className="home-hdr">
         <div>
           <div className="brand">Simon's Fit</div>
@@ -106,8 +107,9 @@ export function Home() {
         </div>
       )}
 
-      <SectionTitle right={<span className="muted small">{thisWeek.length} {t('workouts.lc')}</span>}>{t('home.week')}</SectionTitle>
+      <SectionTitle right={<span className="muted small">{planned > 0 ? `${thisWeek.length}/${planned}` : thisWeek.length} {t('workouts.lc')}</span>}>{t('home.week')}</SectionTitle>
       <div className="card week">
+        {planned > 0 && <div className="week-bar" aria-hidden="true"><i style={{ width: `${Math.min(100, (thisWeek.length / planned) * 100)}%` }} /></div>}
         {dayLetters.map((d, i) => (
           <div key={i} className={`day ${dayHas.has(i) ? 'on' : ''} ${i === todayIdx ? 'today' : ''}`}>
             <span className="dot">{dayHas.has(i) ? <Icon name="check" size={14} /> : ''}</span>
