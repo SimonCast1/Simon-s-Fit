@@ -80,10 +80,10 @@ interface ExInfo {
 
 /* ---------- linha de série ---------- */
 
-function SetRow({ ex, set, idx, prev, target, lang, sugg, startW, pr, readOnly, onPatch, onDone, onMenu, onCopy, onTarget }: {
+function SetRow({ ex, set, idx, prev, target, lang, sugg, startW, pr, active, readOnly, onPatch, onDone, onMenu, onCopy, onTarget }: {
   ex: Exercise; set: SetEntry; idx: number; prev?: SetEntry; target?: { weight: number; reps: number }; lang: 'pt' | 'en';
   sugg: Suggestion | null; startW?: number;
-  pr: boolean; readOnly?: boolean;
+  pr: boolean; active?: boolean; readOnly?: boolean;
   onPatch: (p: Partial<SetEntry>) => void;
   onDone: (p: Partial<SetEntry>) => void;
   onMenu: () => void;
@@ -149,7 +149,7 @@ function SetRow({ ex, set, idx, prev, target, lang, sugg, startW, pr, readOnly, 
   };
 
   const hasPrev = prev !== undefined;
-  const cls = `srow ${set.done ? 'done' : ''} ${set.warmup ? 'warm' : ''} k-${ex.kind}`;
+  const cls = `srow ${set.done ? 'done' : ''} ${active ? 'active' : ''} ${set.warmup ? 'warm' : ''} k-${ex.kind}`;
   return (
     <div className={cls}>
       <button className="s-idx" onClick={onMenu} aria-label="set">
@@ -355,6 +355,17 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
 
   const doneSets = w.exercises.reduce((n, e) => n + e.sets.filter((s) => s.done).length, 0);
   const undoneSets = w.exercises.reduce((n, e) => n + e.sets.filter((s) => !s.done).length, 0);
+  const totalSets = doneSets + undoneSets;
+  const volumeKg = w.exercises.reduce((n, e) => n + e.sets.reduce((m, s) => (s.done && !s.warmup && s.weight && s.reps ? m + s.weight * s.reps : m), 0), 0);
+  const activePos = (() => {
+    for (let ei = 0; ei < w.exercises.length; ei++) {
+      const si = w.exercises[ei].sets.findIndex((s) => !s.done && !s.warmup);
+      if (si >= 0) return { ei, si };
+    }
+    return { ei: -1, si: -1 };
+  })();
+  const ringLen = 2 * Math.PI * 30;
+  const ringPct = totalSets ? doneSets / totalSets : 0;
 
   const routine = !editing && w.routineId !== undefined ? routines.find((r) => r.id === w.routineId) : undefined;
   const changes: RoutineChange[] = routine && doneSets > 0 ? diffWorkoutRoutine(w, routine) : [];
@@ -395,6 +406,22 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
         sub={editing ? new Date(w.startedAt).toLocaleDateString(lang === 'pt' ? 'pt-PT' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : <><Elapsed start={w.startedAt} /> · {doneSets} {t('sets.lc')}</>}
         right={<button className="btn accent sm" onClick={() => { setSaveIdx(new Set()); setFinishOpen(true); }}>{editing ? t('save') : t('finish')}</button>}
       />
+
+      {!editing && totalSets > 0 && (
+        <div className="wk-hero">
+          <div className="ring">
+            <svg viewBox="0 0 72 72" aria-hidden="true">
+              <circle className="trk" cx="36" cy="36" r="30" />
+              <circle className="bar" cx="36" cy="36" r="30" strokeDasharray={ringLen} strokeDashoffset={ringLen * (1 - ringPct)} />
+            </svg>
+            <div className="ring-t"><b>{doneSets}</b><span>/ {totalSets}</span></div>
+          </div>
+          <div className="wk-stats">
+            <div className="wk-stat"><span>{t('volume')}</span><b>{fmtNum(Math.round(volumeKg), lang)} kg</b></div>
+            <div className="wk-stat"><span>{t('sets')}</span><b>{doneSets}/{totalSets}</b></div>
+          </div>
+        </div>
+      )}
 
       {!editing && deload && !hideDeload && (
         <div className="hint warn">
@@ -532,6 +559,7 @@ export function WorkoutScreen({ id, editing }: { id: number; editing?: boolean }
                     lang={lang}
                     sugg={sugg}
                     pr={si === prIdx}
+                    active={!editing && !s.done && !s.warmup && ei === activePos.ei && si === activePos.si}
                     readOnly={false}
                     onPatch={(p) => setPatch(ei, si, p)}
                     onDone={(p) => onDone(ei, si, p)}

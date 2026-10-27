@@ -69,9 +69,9 @@ export function buildCardModel(
 
 const W = 1080;
 const H = 1350;
-const C = { bg: '#0a1020', surface: '#121b30', line: '#2c3d5f', text: '#e8edf7', muted: '#8794ae', accent: '#7aa2f7', onAccent: '#07101f' };
+const C = { bg: '#0d0b14', surface: '#181429', line: '#3a3454', text: '#f3f0ff', muted: '#a49fc0', accent: '#b6ff3b', onAccent: '#0d0b14' };
 const SANS = '"Inter Variable", -apple-system, "Segoe UI", sans-serif';
-const SERIF = '"Cormorant Garamond", Georgia, serif';
+const SERIF = '"Space Grotesk Variable", "Inter Variable", sans-serif';
 
 function fit(ctx: CanvasRenderingContext2D, text: string, maxW: number): string {
   if (ctx.measureText(text).width <= maxW) return text;
@@ -84,7 +84,7 @@ export async function renderCard(m: CardModel, moreLabel: string, prLabel: strin
   try {
     await Promise.all([
       document.fonts.load(`600 40px ${SANS}`),
-      document.fonts.load(`600 80px ${SERIF}`)
+      document.fonts.load(`700 80px ${SERIF}`)
     ]);
   } catch { /* usa as fontes de reserva */ }
   const canvas = document.createElement('canvas');
@@ -105,7 +105,7 @@ export async function renderCard(m: CardModel, moreLabel: string, prLabel: strin
   ctx.fillText("SIMON'S FIT", PAD, 110);
 
   ctx.fillStyle = C.text;
-  ctx.font = `600 92px ${SERIF}`;
+  ctx.font = `700 84px ${SERIF}`;
   ctx.fillText(fit(ctx, m.title, W - PAD * 2), PAD, 225);
   ctx.fillStyle = C.muted;
   ctx.font = `400 32px ${SANS}`;
@@ -118,7 +118,7 @@ export async function renderCard(m: CardModel, moreLabel: string, prLabel: strin
     ctx.fillStyle = C.surface;
     ctx.fillRect(x, 340, bw, 170);
     ctx.fillStyle = C.accent;
-    ctx.font = `600 62px ${SERIF}`;
+    ctx.font = `700 56px ${SERIF}`;
     ctx.fillText(fit(ctx, s.value, bw - 40), x + 24, 430);
     ctx.fillStyle = C.muted;
     ctx.font = `500 26px ${SANS}`;
