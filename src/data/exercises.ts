@@ -1,4 +1,5 @@
 import type { Exercise, ExerciseKind, Muscle } from '../types';
+import { EXTRA_SPECS } from './exercises-extra';
 
 export function slug(name: string): string {
   return name
@@ -118,7 +119,7 @@ const SPECS: Spec[] = [
   ['Cycling (Indoor)', 'Bicicleta (Interior)', 'cardio', null, [], 'machine']
 ];
 
-export const BASE_EXERCISES: Exercise[] = SPECS.map(
+export const BASE_EXERCISES: Exercise[] = [...SPECS, ...EXTRA_SPECS].map(
   ([name, namePt, kind, primary, secondary, equipment, compound]) => {
     const isCompound = !!compound;
     const stack = equipment === 'cable' || equipment === 'machine';
