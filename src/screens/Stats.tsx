@@ -12,7 +12,7 @@ export function Stats() {
   const { t, lang, settings, finished, exMap, exName } = useApp();
   const [tab, setTab] = useState<Tab>('volume');
   return (
-    <div className="screen">
+    <div className="screen stagger">
       <Header title={t('stats')} right={<button className="icon-btn" onClick={() => go('/summary')} aria-label={t('summary.open')}><Icon name="calendar" /></button>} />
       <div className="seg">
         {(['volume', 'strength', 'activity'] as Tab[]).map((k) => (

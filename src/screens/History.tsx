@@ -22,7 +22,7 @@ export function History() {
   }, [finished]);
 
   return (
-    <div className="screen">
+    <div className="screen stagger">
       <Header title={t('history')} sub={`${finished.length} ${t('workouts.lc')}`} />
       {finished.length > 0 && (
         <div className="seg">
@@ -42,7 +42,11 @@ export function History() {
                 const tot = workoutTotals(w, exMap);
                 return (
                   <button key={w.id} className="list-row" onClick={() => go(`/workout/${w.id}`)}>
-                    <div>
+                    <div className="date-badge" aria-hidden="true">
+                      <b>{new Date(w.startedAt).getDate()}</b>
+                      <span>{new Date(w.startedAt).toLocaleDateString(loc, { weekday: 'short' }).replace('.', '')}</span>
+                    </div>
+                    <div className="grow">
                       <div>{w.name}</div>
                       <div className="muted small">
                         {new Date(w.startedAt).toLocaleDateString(loc, { weekday: 'short', day: 'numeric', month: 'short' })} · {fmtDuration(workoutDurationSec(w))}

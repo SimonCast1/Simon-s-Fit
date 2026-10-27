@@ -32,8 +32,8 @@ export function Exercises() {
   }, [exercises, q, mus, usage, exName]);
 
   return (
-    <div className="screen">
-      <Header title={t('exercises')} right={<button className="icon-btn" onClick={() => setCreating(true)} aria-label={t('ex.new')}><Icon name="plus" /></button>} />
+    <div className="screen stagger">
+      <Header title={t('exercises')} sub={`${list.length} ${t('exercises.lc')}`} right={<button className="icon-btn" onClick={() => setCreating(true)} aria-label={t('ex.new')}><Icon name="plus" /></button>} />
       <input className="inp" placeholder={t('search')} value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="chips scroll" style={{ margin: '10px 0' }}>
         <button className={`chip ${mus === null ? 'on' : ''}`} onClick={() => setMus(null)}>{t('all')}</button>
@@ -43,14 +43,15 @@ export function Exercises() {
       <div className="card flush">
         {list.map((e) => (
           <button key={e.id} className="list-row" onClick={() => go(`/exercise/${e.id}`)}>
-            <div>
+            <span className="ex-ico" aria-hidden="true">{(e.primary ? t(`m.${e.primary}`) : t(`kind.${e.kind}`)).slice(0, 2)}</span>
+            <div className="grow">
               <div>{exName(e)}</div>
               <div className="muted small">
                 {e.primary ? t(`m.${e.primary}`) : t(`kind.${e.kind}`)} · {t(`eq.${e.equipment}`)}
                 {e.autoCreated && <span className="tag" style={{ marginLeft: 6 }}>{t('ex.review')}</span>}
               </div>
             </div>
-            <span className="muted small">{usage.get(e.id) ? `${usage.get(e.id)}×` : ''}</span>
+            {usage.get(e.id) ? <span className="use-pill">{usage.get(e.id)}×</span> : null}
           </button>
         ))}
       </div>

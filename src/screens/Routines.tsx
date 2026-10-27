@@ -34,7 +34,7 @@ export function Routines() {
   };
 
   return (
-    <div className="screen">
+    <div className="screen stagger">
       <Header title={t('routines')} right={<button className="icon-btn" onClick={() => go('/routine/new')} aria-label={t('routine.new')}><Icon name="plus" /></button>} />
       {routines.length === 0 && (
         <Empty title={t('routines.empty')} text={t('routines.empty.text')} action={<button className="btn accent" onClick={() => go('/routine/new')}>{t('routine.new')}</button>} />
@@ -54,8 +54,10 @@ export function Routines() {
               ]}
             />
           </div>
+          {r.days.length > 0 && (
+            <div className="day-pills">{r.days.map((d) => <span key={d} className="day-pill">{t(`dow.${d}`)}</span>)}</div>
+          )}
           <div className="muted small">
-            {r.days.length > 0 && <>{r.days.map((d) => t(`dow.${d}`)).join(' · ')} · </>}
             {r.items.length} {t('exercises.lc')} · {r.items.reduce((n, x) => n + x.sets, 0)} {t('sets.lc')}
           </div>
           <div className="small ex-list-line">
